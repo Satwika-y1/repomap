@@ -1,143 +1,413 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+export const maxDuration = 60;
 
-function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
+type ValidLayer = "frontend" | "api" | "logic" | "database" | "config";
+
+interface ArchNode {
+  id: string;
+  label: string;
+  layer: ValidLayer;
+  description: string;
+  files: string[];
+  x: number;
+  y: number;
+}
+
+interface ArchEdge {
+  id: string;
+  source: string;
+  target: string;
+  label: string;
+}
+
+interface OnboardingStep {
+  step: number;
+  filePath: string;
+  reason: string;
+}
+
+interface ArchitectureResult {
+  projectName: string;
+  summary: string;
+  techStack: string[];
+  nodes: ArchNode[];
+  edges: ArchEdge[];
+  onboardingSteps: OnboardingStep[];
+}
+
+function getGitHubHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    "User-Agent": "RepoMap-AI",
+    Accept: "application/vnd.github+json",
+  };
+  if (process.env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
+  return headers;
+}
+
+function parseGitHubUrl(input: string): { owner: string; repo: string } | null {
   try {
-    const cleaned = url.trim().replace(/\.git$/, "");
-    const match = cleaned.match(/github\.com\/([^\/]+)\/([^\/]+)/i);
-    if (!match) return null;
-    return { owner: match[1], repo: match[2] };
+    const trimmed = input.trim().replace(/\/+$/, "");
+    if (!trimmed) return null;
+
+    // Support shorthand like "sindresorhus/ky"
+    if (/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(trimmed)) {
+      const [owner, rawRepo] = trimmed.split("/");
+      return { owner, repo: rawRepo.replace(/\.git$/i, "") };
+    }
+
+    const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const parsed = new URL(withProtocol);
+    if (!/^(www\.)?github\.com$/i.test(parsed.hostname)) return null;
+
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    if (parts.length < 2) return null;
+
+    const owner = parts[0].trim();
+    const repo = parts[1].replace(/\.git$/i, "").trim();
+    if (!owner || !repo) return null;
+
+    return { owner, repo };
   } catch {
     return null;
   }
 }
 
-function selectHighSignalFiles(paths: string[]): string[] {
+function isNoisePath(filePath: string): boolean {
+  const lower = filePath.toLowerCase();
+  const baseName = lower.split("/").pop() || "";
+
+  const ignoredDirs = [
+    "node_modules/",
+    ".git/",
+    "dist/",
+    "build/",
+    ".next/",
+    "coverage/",
+    "__pycache__/",
+    ".devcontainer/",
+    ".github/",
+    ".vscode/",
+  ];
+
   const ignoredExtensions = [
-    ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp",
+    ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp", ".ai",
     ".woff", ".woff2", ".ttf", ".eot", ".mp4", ".pdf", ".zip",
-    ".lock", ".css", ".scss", ".map"
+    ".lock", ".css", ".scss", ".map", ".min.js",
   ];
-  const ignoredDirs = ["node_modules/", ".git/", "dist/", "build/", ".next/", "coverage/", "__pycache__/"];
 
-  const validPaths = paths.filter((p) => {
-    const lower = p.toLowerCase();
-    if (ignoredDirs.some((dir) => lower.includes(dir))) return false;
-    if (ignoredExtensions.some((ext) => lower.endsWith(ext))) return false;
-    if (lower.endsWith("package-lock.json") || lower.endsWith("yarn.lock")) return false;
+  if (ignoredDirs.some((dir) => lower.includes(dir))) return true;
+  if (lower.startsWith(".eslint-plugin-local/")) return true;
+  if (ignoredExtensions.some((ext) => lower.endsWith(ext))) return true;
+  if (
+    baseName === "package-lock.json" ||
+    baseName === "yarn.lock" ||
+    baseName === "pnpm-lock.yaml" ||
+    baseName === "license" ||
+    baseName === "license.txt" ||
+    baseName === "license.md" ||
+    baseName === "changelog.md" ||
+    baseName === "contributing.md" ||
+    baseName === "agents.md"
+  ) {
     return true;
-  });
+  }
 
-  const priorityPatterns = [
-    /^readme\.md$/i,
-    /^package\.json$/i,
-    /^requirements\.txt$/i,
-    /^pyproject\.toml$/i,
-    /^go\.mod$/i,
-    /^cargo\.toml$/i,
-    /schema\.prisma$/i,
-    /(index|main|app|server|route)\.(ts|tsx|js|jsx|py|go)$/i,
-  ];
+  return false;
+}
 
-  const prioritized: string[] = [];
-  const secondary: string[] = [];
+function selectHighSignalFiles(paths: string[]): string[] {
+  const validPaths = paths.filter((p) => !isNoisePath(p));
 
-  for (const file of validPaths) {
-    if (priorityPatterns.some((regex) => regex.test(file.split("/").pop() || ""))) {
-      prioritized.push(file);
-    } else if (/\.(ts|tsx|js|jsx|py|go|java|rs|sql)$/i.test(file)) {
-      secondary.push(file);
+  const scoreFile = (filePath: string): number => {
+    const lower = filePath.toLowerCase();
+    const fileName = lower.split("/").pop() || "";
+    let score = 0;
+
+    if (/^(package\.json|pyproject\.toml|cargo\.toml|go\.mod|requirements\.txt)$/.test(fileName)) {
+      score += 90;
+    }
+    if (/^(index|main|app|server|route|mod|lib)\.(ts|tsx|js|jsx|py|go|rs)$/.test(fileName)) {
+      score += 80;
+    }
+    if (/^(src|app|packages|lib|server|api)\//.test(lower)) {
+      score += 45;
+    }
+    if (/schema\.prisma$/.test(lower)) {
+      score += 70;
+    }
+    if (/\.(ts|tsx|js|jsx|py|go|java|rs|sql)$/.test(fileName)) {
+      score += 25;
+    }
+    if (/^readme\.md$/i.test(fileName)) {
+      score += 20;
+    }
+    return score;
+  };
+
+  return [...validPaths]
+    .sort((a, b) => scoreFile(b) - scoreFile(a) || a.localeCompare(b))
+    .slice(0, 12);
+}
+
+function normalizeLayer(raw: string | undefined, fallbackIndex = 0): ValidLayer {
+  const lower = (raw || "").toLowerCase().trim();
+  if (/(front|ui|web|client|component|page|view)/.test(lower)) return "frontend";
+  if (/(api|route|controller|endpoint|graphql|rpc)/.test(lower)) return "api";
+  if (/(db|data|prisma|migration|model|schema|store|storage)/.test(lower)) return "database";
+  if (/(config|script|infra|deploy|docker|tool)/.test(lower)) return "config";
+  if (/(logic|core|src|lib|service|engine|util|pkg|package)/.test(lower)) return "logic";
+
+  const fallbacks: ValidLayer[] = ["logic", "frontend", "api", "config", "database"];
+  return fallbacks[fallbackIndex % fallbacks.length];
+}
+
+function describeOnboardingStep(filePath: string, stepIndex: number): string {
+  const lower = filePath.toLowerCase();
+  const base = filePath.split("/").pop() || filePath;
+
+  if (base === "package.json") {
+    return "Inspect dependencies, scripts, and entry exports to see how the project runs and builds.";
+  }
+  if (/^(pyproject\.toml|cargo\.toml|go\.mod|requirements\.txt)$/.test(base)) {
+    return "Check project dependencies, runtime requirements, and core package setup.";
+  }
+  if (/schema\.prisma$/.test(lower)) {
+    return "Review data models and database relations before tracing queries.";
+  }
+  if (/(index|main|app|server|route)\.(ts|tsx|js|jsx|py|go|rs)$/.test(base)) {
+    return "Trace the primary execution entrypoint and public exports/routes from here.";
+  }
+  if (/^readme\.md$/i.test(base)) {
+    return "Read the high-level project overview, setup steps, and usage examples.";
+  }
+  return stepIndex === 0
+    ? "Start here to see core types, main logic, or key module structure."
+    : "Follow this file next to see how supporting modules connect and share data.";
+}
+
+function buildFallbackArchitecture(
+  owner: string,
+  repo: string,
+  allPaths: string[],
+  selectedFiles: string[]
+): ArchitectureResult {
+  const cleanPaths = allPaths.filter((p) => !isNoisePath(p));
+  const sourcePaths = cleanPaths.length > 0 ? cleanPaths : allPaths;
+
+  const folderCounts = new Map<string, string[]>();
+  for (const filePath of sourcePaths) {
+    const parts = filePath.split("/").filter(Boolean);
+    if (parts.length > 1) {
+      const top = parts[0];
+      if (!top.startsWith(".")) {
+        const list = folderCounts.get(top) || [];
+        list.push(filePath);
+        folderCounts.set(top, list);
+      }
     }
   }
 
-  return [...prioritized, ...secondary].slice(0, 12);
-}
+  const rankedFolders = Array.from(folderCounts.entries())
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 5);
 
-function buildFallbackArchitecture(owner: string, repo: string, allPaths: string[], selectedFiles: string[]) {
-  const topFolders = Array.from(
-    new Set(
-      allPaths
-        .map((p) => p.split("/")[0])
-        .filter((part) => part && !part.startsWith("."))
-    )
-  ).slice(0, 5);
+  const nodes: ArchNode[] = rankedFolders.map(([folder, files], idx) => {
+    const layer = normalizeLayer(folder, idx);
+    return {
+      id: `node-${idx + 1}`,
+      label: folder,
+      layer,
+      description: `${files.length} files under ${folder}/ — inspect this area for ${
+        layer === "frontend"
+          ? "UI components, pages, or client state"
+          : layer === "api"
+          ? "request handlers, routes, or external interfaces"
+          : layer === "database"
+          ? "schemas, models, or data persistence"
+          : layer === "config"
+          ? "build scripts, environment setup, or tooling"
+          : "core implementation logic and helpers"
+      }.`,
+      files: files.slice(0, 6),
+      x: 80 + (idx % 3) * 290,
+      y: 90 + Math.floor(idx / 3) * 240,
+    };
+  });
 
-  const nodes = topFolders.map((folder, idx) => ({
-    id: `node-${idx + 1}`,
-    label: folder,
-    layer: idx === 0 ? "frontend" : idx === 1 ? "api" : idx === 2 ? "logic" : "config",
-    description: `Modules and files organized under ${folder}/ in ${owner}/${repo}.`,
-    files: allPaths.filter((p) => p.startsWith(`${folder}/`)).slice(0, 5),
-    x: 80 + (idx % 3) * 290,
-    y: 90 + Math.floor(idx / 3) * 240,
-  }));
-
-  const edges = nodes.slice(1).map((node, idx) => ({
+  const edges: ArchEdge[] = nodes.slice(1).map((node, idx) => ({
     id: `edge-${idx + 1}`,
     source: nodes[idx].id,
     target: node.id,
-    label: "relates to",
+    label: "connects to",
   }));
+
+  const stepsSource = (selectedFiles.length > 0 ? selectedFiles : sourcePaths)
+    .filter(Boolean)
+    .slice(0, 3);
 
   return {
     projectName: `${owner}/${repo}`,
-    summary: `Structural overview of ${owner}/${repo} generated from ${allPaths.length} repository files (fallback graph used due to temporary API demand).`,
+    summary: `Structural map of ${owner}/${repo} across ${allPaths.length} files (structured fallback view; verify GEMINI_API_KEY in Vercel for full AI synthesis).`,
     techStack: ["GitHub Repository", "Multi-File Codebase"],
-    nodes: nodes.length
-      ? nodes
-      : [
-          {
-            id: "root",
-            label: repo,
-            layer: "config",
-            description: "Repository root structure.",
-            files: selectedFiles.slice(0, 5),
-            x: 200,
-            y: 150,
-          },
-        ],
+    nodes:
+      nodes.length > 0
+        ? nodes
+        : [
+            {
+              id: "root",
+              label: repo,
+              layer: "logic",
+              description: `Core files in ${owner}/${repo}.`,
+              files: stepsSource,
+              x: 200,
+              y: 150,
+            },
+          ],
     edges,
-    onboardingSteps: selectedFiles.slice(0, 3).map((filePath, i) => ({
+    onboardingSteps: stepsSource.map((filePath, i) => ({
       step: i + 1,
       filePath,
-      reason: "High-signal entry or configuration file in the repository.",
+      reason: describeOnboardingStep(filePath, i),
     })),
+  };
+}
+
+function sanitizeArchitecture(
+  raw: unknown,
+  owner: string,
+  repo: string,
+  selectedFiles: string[]
+): ArchitectureResult | null {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as Partial<ArchitectureResult>;
+
+  if (!Array.isArray(data.nodes) || data.nodes.length === 0) return null;
+
+  const seenNodeIds = new Set<string>();
+  const nodes: ArchNode[] = data.nodes.map((node, idx) => {
+    let id = String(node.id || `node-${idx + 1}`).trim();
+    if (!id || seenNodeIds.has(id)) id = `node-${idx + 1}`;
+    seenNodeIds.add(id);
+
+    return {
+      id,
+      label: String(node.label || `Module ${idx + 1}`),
+      layer: normalizeLayer(node.layer, idx),
+      description: String(node.description || "Core repository module."),
+      files: Array.isArray(node.files) ? node.files.map(String).filter(Boolean).slice(0, 8) : [],
+      x: typeof node.x === "number" && Number.isFinite(node.x) ? node.x : 80 + (idx % 3) * 290,
+      y: typeof node.y === "number" && Number.isFinite(node.y) ? node.y : 90 + Math.floor(idx / 3) * 240,
+    };
+  });
+
+  const seenEdges = new Set<string>();
+  const edges: ArchEdge[] = Array.isArray(data.edges)
+    ? data.edges
+        .filter((e) => {
+          if (!e) return false;
+          const src = String(e.source);
+          const tgt = String(e.target);
+          const pair = `${src}->${tgt}`;
+          if (!seenNodeIds.has(src) || !seenNodeIds.has(tgt) || src === tgt || seenEdges.has(pair)) {
+            return false;
+          }
+          seenEdges.add(pair);
+          return true;
+        })
+        .map((e, idx) => ({
+          id: String(e.id || `edge-${idx + 1}`),
+          source: String(e.source),
+          target: String(e.target),
+          label: String(e.label || "connects to"),
+        }))
+    : [];
+
+  const rawSteps =
+    Array.isArray(data.onboardingSteps) && data.onboardingSteps.length > 0
+      ? data.onboardingSteps.slice(0, 3).map((s, idx) => ({
+          filePath: String(s.filePath || selectedFiles[idx] || "").trim(),
+          reason: String(s.reason || describeOnboardingStep(String(s.filePath || ""), idx)),
+        }))
+      : selectedFiles.slice(0, 3).map((filePath, idx) => ({
+          filePath: filePath.trim(),
+          reason: describeOnboardingStep(filePath, idx),
+        }));
+
+  const onboardingSteps: OnboardingStep[] = rawSteps
+    .filter((s) => s.filePath.length > 0)
+    .map((s, idx) => ({
+      step: idx + 1,
+      filePath: s.filePath,
+      reason: s.reason,
+    }));
+
+  return {
+    projectName: String(data.projectName || `${owner}/${repo}`),
+    summary: String(data.summary || `Architectural overview of ${owner}/${repo}.`),
+    techStack:
+      Array.isArray(data.techStack) && data.techStack.length > 0
+        ? data.techStack.map(String).filter(Boolean).slice(0, 8)
+        : ["GitHub Repository"],
+    nodes,
+    edges,
+    onboardingSteps,
   };
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { repoUrl } = await req.json();
-    if (!repoUrl) {
+    const body = await req.json().catch(() => ({}));
+    const repoUrl = typeof body?.repoUrl === "string" ? body.repoUrl : "";
+
+    if (!repoUrl.trim()) {
       return NextResponse.json({ error: "Repository URL is required." }, { status: 400 });
     }
 
     const parsed = parseGitHubUrl(repoUrl);
     if (!parsed) {
-      return NextResponse.json({ error: "Invalid GitHub repository URL." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid GitHub URL. Use https://github.com/owner/repo or owner/repo." },
+        { status: 400 }
+      );
     }
 
     const { owner, repo } = parsed;
+    const encodedOwner = encodeURIComponent(owner);
+    const encodedRepo = encodeURIComponent(repo);
+    const ghHeaders = getGitHubHeaders();
 
-    const repoMetaRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-      headers: { "User-Agent": "RepoMap-AI" },
-    });
+    const repoMetaRes = await fetch(
+      `https://api.github.com/repos/${encodedOwner}/${encodedRepo}`,
+      {
+        headers: ghHeaders,
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+      }
+    );
 
     if (!repoMetaRes.ok) {
-      return NextResponse.json(
-        { error: "Repository not found or is private. Please use a public GitHub URL." },
-        { status: 404 }
-      );
+      const status = repoMetaRes.status === 403 || repoMetaRes.status === 429 ? 429 : 404;
+      const message =
+        status === 429
+          ? "GitHub API rate limit reached. Add GITHUB_TOKEN in Vercel environment variables."
+          : "Repository not found or is private. Please use a public GitHub URL.";
+      return NextResponse.json({ error: message }, { status });
     }
 
     const repoMeta = await repoMetaRes.json();
     const defaultBranch = repoMeta.default_branch || "main";
 
     const treeRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/git/trees/${defaultBranch}?recursive=1`,
-      { headers: { "User-Agent": "RepoMap-AI" } }
+      `https://api.github.com/repos/${encodedOwner}/${encodedRepo}/git/trees/${encodeURIComponent(defaultBranch)}?recursive=1`,
+      {
+        headers: ghHeaders,
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+      }
     );
 
     if (!treeRes.ok) {
@@ -146,15 +416,20 @@ export async function POST(req: NextRequest) {
 
     const treeData = await treeRes.json();
     const allFilePaths: string[] = (treeData.tree || [])
-      .filter((item: { type: string }) => item.type === "blob")
+      .filter((item: { type?: string; path?: string }) => item.type === "blob" && typeof item.path === "string")
       .map((item: { path: string }) => item.path);
 
     const selectedFiles = selectHighSignalFiles(allFilePaths);
+
     const fileContents = await Promise.all(
       selectedFiles.map(async (filePath) => {
         try {
-          const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${defaultBranch}/${filePath}`;
-          const res = await fetch(rawUrl);
+          const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
+          const rawUrl = `https://raw.githubusercontent.com/${encodedOwner}/${encodedRepo}/${encodeURIComponent(defaultBranch)}/${encodedPath}`;
+          const res = await fetch(rawUrl, {
+            cache: "no-store",
+            signal: AbortSignal.timeout(5000),
+          });
           if (!res.ok) return null;
           const text = await res.text();
           return `--- FILE: ${filePath} ---\n${text.slice(0, 2500)}`;
@@ -164,12 +439,23 @@ export async function POST(req: NextRequest) {
       })
     );
 
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        buildFallbackArchitecture(owner, repo, allFilePaths, selectedFiles)
+      );
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     const codeContext = fileContents.filter(Boolean).join("\n\n");
-    const directoryOverview = allFilePaths.slice(0, 120).join("\n");
+    const directoryOverview = allFilePaths
+      .filter((p) => !isNoisePath(p))
+      .slice(0, 120)
+      .join("\n");
 
     const prompt = `You are a Principal Software Architect analyzing a GitHub repository (${owner}/${repo}) to onboard a new software engineering intern.
 
-Directory Tree (up to 120 files):
+Directory Tree (up to 120 non-noise files):
 ${directoryOverview}
 
 Key File Contents:
@@ -177,11 +463,11 @@ ${codeContext}
 
 Analyze this codebase and generate:
 1. A clear project summary and detected tech stack.
-2. Architectural nodes representing logical modules/layers (UI/Frontend, API/Routes, Services/Logic, Database/Storage, Config/External). Position them cleanly on a 2D canvas (x between 50 and 900, y between 50 and 600) so nodes do not overlap.
+2. Architectural nodes representing logical modules/layers (strictly one of: frontend, api, logic, database, config). Position them cleanly on a 2D canvas (x between 50 and 900, y between 50 and 600) so nodes do not overlap.
 3. Directed edges showing how data or requests flow between those nodes.
-4. The top 3 entry-point files a new developer should read first, in order.`;
+4. The top 3 entry-point files a new developer should read first, in order, with concrete "reason" guidance on what to look for in each file.`;
 
-    const modelName = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+    const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
@@ -252,8 +538,13 @@ Analyze this codebase and generate:
           },
         });
 
-        const architectureData = JSON.parse(response.text || "{}");
-        return NextResponse.json(architectureData);
+        const parsedJson = JSON.parse(response.text || "{}");
+        const sanitized = sanitizeArchitecture(parsedJson, owner, repo, selectedFiles);
+        if (!sanitized) {
+          throw new Error("Invalid architecture JSON returned by model.");
+        }
+
+        return NextResponse.json(sanitized);
       } catch (apiErr) {
         if (attempt === 2) {
           console.warn("Gemini API temporarily unavailable, returning fallback graph:", apiErr);
