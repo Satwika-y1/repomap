@@ -94,10 +94,10 @@ function getNodeFiles(node: ArchNode): string[] {
 }
 
 /**
- * Interactive Nebula & Floating Code-Glyph Backdrop
- * Soft violet/fuchsia/indigo nebula clouds + floating code tokens reacting to cursor movement
+ * Interactive Orbital Architecture Backdrop
+ * Concentric glowing architectural rings, orbiting satellites, and click shockwaves
  */
-function InteractiveGlyphNebulaBackdrop() {
+function OrbitalArchitectureBackdrop() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -122,154 +122,148 @@ function InteractiveGlyphNebulaBackdrop() {
     };
     resize();
 
-    const glyphs = ["{ }", "</>", "=>", "::", "[ ]", "fn()", "git", "ast"];
-    const colors = [
-      "192, 132, 252", // purple-400
-      "232, 121, 249", // fuchsia-400
-      "167, 139, 250", // violet-400
-      "129, 140, 248", // indigo-400
-    ];
+    let targetOffsetX = 0;
+    let targetOffsetY = 0;
+    let offsetX = 0;
+    let offsetY = 0;
+    let angle = 0;
 
-    const total = Math.min(34, Math.max(18, Math.floor((width * height) / 48000)));
-    const items = Array.from({ length: total }, (_, i) => ({
-      glyph: glyphs[i % glyphs.length],
-      x: Math.random() * width,
-      y: Math.random() * height,
-      vx: (Math.random() - 0.5) * 0.34,
-      vy: (Math.random() - 0.5) * 0.34,
-      size: Math.random() * 4 + 11,
-      rgb: colors[i % colors.length],
-      phase: Math.random() * Math.PI * 2,
-      driftAngle: (Math.random() - 0.5) * 0.25,
-    }));
-
-    const pointer = { x: -9999, y: -9999, active: false };
+    const waves: { x: number; y: number; r: number; alpha: number }[] = [];
 
     const onMove = (e: MouseEvent) => {
-      pointer.x = e.clientX;
-      pointer.y = e.clientY;
-      pointer.active = true;
+      const nx = (e.clientX / Math.max(1, width) - 0.5) * 2;
+      const ny = (e.clientY / Math.max(1, height) - 0.5) * 2;
+      targetOffsetX = nx * 28;
+      targetOffsetY = ny * 20;
     };
 
-    const onLeave = () => {
-      pointer.active = false;
+    const onClick = (e: MouseEvent) => {
+      waves.push({ x: e.clientX, y: e.clientY, r: 12, alpha: 0.5 });
     };
 
     window.addEventListener("resize", resize);
     window.addEventListener("mousemove", onMove, { passive: true });
-    window.addEventListener("mouseleave", onLeave);
+    window.addEventListener("click", onClick);
 
-    const tick = () => {
+    const satellites = [
+      { radiusFactor: 0.2, speed: 0.0045, phase: 0, size: 3.2, rgb: "192, 132, 252" },
+      { radiusFactor: 0.2, speed: 0.0045, phase: Math.PI, size: 2.6, rgb: "232, 121, 249" },
+      { radiusFactor: 0.34, speed: -0.0028, phase: 1.1, size: 3.5, rgb: "167, 139, 250" },
+      { radiusFactor: 0.34, speed: -0.0028, phase: 4.2, size: 2.8, rgb: "129, 140, 248" },
+      { radiusFactor: 0.48, speed: 0.0017, phase: 2.3, size: 3.0, rgb: "217, 70, 239" },
+    ];
+
+    const render = () => {
       ctx.clearRect(0, 0, width, height);
+      angle += 0.0016;
+      offsetX += (targetOffsetX - offsetX) * 0.05;
+      offsetY += (targetOffsetY - offsetY) * 0.05;
 
-      // Soft reactive glow around pointer
-      if (pointer.active) {
-        const glow = ctx.createRadialGradient(
-          pointer.x,
-          pointer.y,
-          0,
-          pointer.x,
-          pointer.y,
-          240
-        );
-        glow.addColorStop(0, "rgba(192, 132, 252, 0.14)");
-        glow.addColorStop(0.55, "rgba(217, 70, 239, 0.05)");
-        glow.addColorStop(1, "rgba(6, 5, 15, 0)");
-        ctx.fillStyle = glow;
+      const cx = width * 0.5 + offsetX;
+      const cy = height * 0.44 + offsetY;
+      const baseRadius = Math.min(width, height) * 0.85;
+
+      // Subtle radial sweep cone
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle * 2.2);
+      const sweep = ctx.createConicGradient(0, 0);
+      sweep.addColorStop(0, "rgba(168, 85, 247, 0.11)");
+      sweep.addColorStop(0.14, "rgba(217, 70, 239, 0.04)");
+      sweep.addColorStop(0.28, "rgba(168, 85, 247, 0)");
+      sweep.addColorStop(1, "rgba(168, 85, 247, 0)");
+      ctx.fillStyle = sweep;
+      ctx.beginPath();
+      ctx.arc(0, 0, baseRadius * 0.56, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Concentric architectural orbital rings
+      const ringFactors = [0.2, 0.34, 0.48];
+      ringFactors.forEach((rf, idx) => {
+        const r = baseRadius * rf;
+        ctx.strokeStyle =
+          idx === 1
+            ? "rgba(192, 132, 252, 0.18)"
+            : "rgba(139, 92, 246, 0.13)";
+        ctx.lineWidth = idx === 1 ? 1.15 : 0.9;
+        ctx.setLineDash(idx === 1 ? [6, 8] : []);
         ctx.beginPath();
-        ctx.arc(pointer.x, pointer.y, 240, 0, Math.PI * 2);
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+
+      // Orbiting nodes along rings
+      for (const sat of satellites) {
+        sat.phase += sat.speed;
+        const r = baseRadius * sat.radiusFactor;
+        const sx = cx + Math.cos(sat.phase) * r;
+        const sy = cy + Math.sin(sat.phase) * r;
+
+        ctx.fillStyle = `rgba(${sat.rgb}, 0.85)`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, sat.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(${sat.rgb}, 0.18)`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, sat.size * 3.2, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      for (const it of items) {
-        it.phase += 0.018;
-        it.vx *= 0.988;
-        it.vy *= 0.988;
-        if (Math.abs(it.vx) < 0.1) it.vx += (Math.random() - 0.5) * 0.025;
-        if (Math.abs(it.vy) < 0.1) it.vy += (Math.random() - 0.5) * 0.025;
-
-        let proximity = 0;
-        if (pointer.active) {
-          const dx = it.x - pointer.x;
-          const dy = it.y - pointer.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < 185 && dist > 1) {
-            proximity = 1 - dist / 185;
-            // Gentle swirl & soft push away from cursor core
-            it.vx += (dx / dist) * proximity * 0.055 + (-dy / dist) * proximity * 0.022;
-            it.vy += (dy / dist) * proximity * 0.055 + (dx / dist) * proximity * 0.022;
-          }
+      // Click shockwave rings
+      for (let i = waves.length - 1; i >= 0; i--) {
+        const w = waves[i];
+        w.r += 5;
+        w.alpha *= 0.94;
+        if (w.alpha < 0.015) {
+          waves.splice(i, 1);
+          continue;
         }
-
-        it.x += it.vx;
-        it.y += it.vy;
-
-        if (it.x < -50) it.x = width + 50;
-        if (it.x > width + 50) it.x = -50;
-        if (it.y < -40) it.y = height + 40;
-        if (it.y > height + 40) it.y = -40;
-
-        const baseAlpha = 0.16 + Math.sin(it.phase) * 0.05 + proximity * 0.45;
-        ctx.save();
-        ctx.translate(it.x, it.y);
-        ctx.rotate(Math.sin(it.phase * 0.7) * 0.08 + it.driftAngle * 0.1);
-        ctx.font = `500 ${it.size.toFixed(0)}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        if (proximity > 0.15) {
-          ctx.shadowColor = `rgba(${it.rgb}, 0.65)`;
-          ctx.shadowBlur = 10 * proximity;
-        }
-        ctx.fillStyle = `rgba(${it.rgb}, ${Math.min(0.75, baseAlpha).toFixed(3)})`;
-        ctx.fillText(it.glyph, 0, 0);
-        ctx.restore();
+        ctx.strokeStyle = `rgba(217, 70, 239, ${w.alpha.toFixed(3)})`;
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.arc(w.x, w.y, w.r, 0, Math.PI * 2);
+        ctx.stroke();
       }
 
-      animId = window.requestAnimationFrame(tick);
+      animId = window.requestAnimationFrame(render);
     };
 
-    animId = window.requestAnimationFrame(tick);
+    animId = window.requestAnimationFrame(render);
 
     return () => {
       window.cancelAnimationFrame(animId);
       window.removeEventListener("resize", resize);
       window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseleave", onLeave);
+      window.removeEventListener("click", onClick);
     };
   }, []);
 
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-[#06050f]"
+      className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-[#060510]"
     >
-      {/* Layered cosmic violet, plum & indigo nebula clouds */}
+      {/* Soft violet & magenta ambient washes */}
       <div
-        className="absolute -top-48 left-1/4 h-[620px] w-[920px] rounded-full blur-[140px]"
+        className="absolute -top-44 left-1/2 -translate-x-1/2 h-[560px] w-[920px] rounded-full blur-[140px]"
         style={{
           background:
-            "radial-gradient(circle, rgba(168,85,247,0.34) 0%, rgba(107,33,168,0.16) 52%, rgba(6,5,15,0) 78%)",
-          animation: "rmNebulaDriftA 16s ease-in-out infinite",
+            "radial-gradient(circle, rgba(168,85,247,0.28) 0%, rgba(109,40,217,0.12) 54%, rgba(6,5,16,0) 78%)",
+          animation: "rmOrbBloom 11s ease-in-out infinite",
         }}
       />
       <div
-        className="absolute top-1/3 -right-28 h-[560px] w-[760px] rounded-full blur-[145px]"
+        className="absolute bottom-0 right-0 h-[440px] w-[680px] rounded-full blur-[140px]"
         style={{
           background:
-            "radial-gradient(circle, rgba(217,70,239,0.24) 0%, rgba(79,70,229,0.15) 55%, rgba(6,5,15,0) 78%)",
-          animation: "rmNebulaDriftB 20s ease-in-out infinite",
-        }}
-      />
-      <div
-        className="absolute -bottom-44 left-10 h-[520px] w-[840px] rounded-full blur-[140px]"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(124,58,237,0.28) 0%, rgba(59,7,100,0.14) 56%, rgba(6,5,15,0) 78%)",
-          animation: "rmNebulaDriftA 24s ease-in-out reverse infinite",
+            "radial-gradient(circle, rgba(217,70,239,0.18) 0%, rgba(79,70,229,0.10) 56%, rgba(6,5,16,0) 78%)",
+          animation: "rmOrbBloom 14s ease-in-out 3s infinite",
         }}
       />
 
-      {/* Interactive floating code glyphs */}
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
     </div>
   );
@@ -426,7 +420,7 @@ function Panel({
         className="pointer-events-none absolute -inset-1.5 rounded-3xl opacity-65 group-hover:opacity-95 transition-opacity duration-500 blur-xl"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 35%, rgba(168,85,247,0.24) 0%, rgba(126,34,206,0.10) 58%, rgba(6,5,15,0) 84%)",
+            "radial-gradient(ellipse at 50% 35%, rgba(168,85,247,0.24) 0%, rgba(126,34,206,0.10) 58%, rgba(6,5,16,0) 84%)",
         }}
       />
       <div className="relative h-full rounded-2xl border border-purple-400/25 bg-[#0b091c]/60 shadow-[0_0_28px_rgba(147,51,234,0.12)]">
@@ -702,8 +696,8 @@ export default function HomePage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#06050f] text-slate-100 flex flex-col relative overflow-x-hidden selection:bg-purple-500/30 antialiased">
-      <InteractiveGlyphNebulaBackdrop />
+    <div className="min-h-screen bg-[#060510] text-slate-100 flex flex-col relative overflow-x-hidden selection:bg-purple-500/30 antialiased">
+      <OrbitalArchitectureBackdrop />
 
       {/* Smooth purple enter/exit transition overlay */}
       {showPurpleFade && (
@@ -713,7 +707,7 @@ export default function HomePage() {
           className="pointer-events-none fixed inset-0 z-50"
           style={{
             background:
-              "radial-gradient(ellipse 85% 65% at 50% 40%, rgba(168,85,247,0.22) 0%, rgba(126,34,206,0.10) 50%, rgba(6,5,15,0) 84%)",
+              "radial-gradient(ellipse 85% 65% at 50% 40%, rgba(168,85,247,0.22) 0%, rgba(126,34,206,0.10) 50%, rgba(6,5,16,0) 84%)",
             animation:
               "rmSmoothDissolve 3s cubic-bezier(0.22, 1, 0.36, 1) forwards",
           }}
@@ -727,13 +721,9 @@ export default function HomePage() {
           68% { opacity: 0.55; }
           100% { opacity: 0; }
         }
-        @keyframes rmNebulaDriftA {
-          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-          50% { transform: translate3d(42px, 24px, 0) scale(1.07); }
-        }
-        @keyframes rmNebulaDriftB {
-          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-          50% { transform: translate3d(-36px, -20px, 0) scale(1.06); }
+        @keyframes rmOrbBloom {
+          0%, 100% { opacity: 0.55; transform: scale(0.98); }
+          50% { opacity: 0.95; transform: scale(1.04); }
         }
         @keyframes rmFadeSlide {
           0% { opacity: 0; transform: translateY(8px); }
@@ -1155,7 +1145,7 @@ export default function HomePage() {
                           }`}
                           style={{
                             background:
-                              "radial-gradient(ellipse at 50% 40%, rgba(168,85,247,0.24) 0%, rgba(126,34,206,0.10) 60%, rgba(6,5,15,0) 85%)",
+                              "radial-gradient(ellipse at 50% 40%, rgba(168,85,247,0.24) 0%, rgba(126,34,206,0.10) 60%, rgba(6,5,16,0) 85%)",
                           }}
                         />
                         <button
