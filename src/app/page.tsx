@@ -785,26 +785,6 @@ export default function HomePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to analyze repository.");
       setAnalysis(data);
-      const overlay = document.createElement("div");
-      Object.assign(overlay.style, {
-        position: "fixed",
-        inset: "0",
-        zIndex: "99999",
-        pointerEvents: "none",
-        background: "radial-gradient(circle at 50% 40%, rgba(192,132,252,0.55) 0%, rgba(147,51,234,0.28) 45%, rgba(15,10,30,0) 80%)",
-        backdropFilter: "blur(5px)",
-        opacity: "0",
-      });
-      document.body.appendChild(overlay);
-      overlay.animate(
-        [
-          { opacity: 0, transform: "scale(0.98)" },
-          { opacity: 1, transform: "scale(1)", offset: 0.3 },
-          { opacity: 0, transform: "scale(1.02)" },
-        ],
-        { duration: 1300, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" }
-      );
-      setTimeout(() => overlay.remove(), 1350);
       saveRecentRepo(urlToAnalyze, data.projectName);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -812,6 +792,41 @@ export default function HomePage() {
       setLoading(false);
     }
   };
+
+  
+  useEffect(() => {
+    if (!analysis) return;
+    const el = document.createElement("div");
+    el.setAttribute("aria-hidden", "true");
+    Object.assign(el.style, {
+      position: "fixed",
+      inset: "0",
+      zIndex: "99990",
+      pointerEvents: "none",
+      opacity: "0",
+      background:
+        "radial-gradient(circle at 50% 35%, rgba(192, 132, 252, 0.42) 0%, rgba(126, 34, 206, 0.2) 45%, rgba(10, 10, 20, 0) 78%)",
+      backdropFilter: "blur(3px)",
+    });
+    document.body.appendChild(el);
+    const anim = el.animate(
+      [
+        { opacity: 0, transform: "scale(0.99)" },
+        { opacity: 1, transform: "scale(1)", offset: 0.28 },
+        { opacity: 0, transform: "scale(1.01)" },
+      ],
+      { duration: 1200, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" }
+    );
+    const timer = setTimeout(() => {
+      anim.cancel();
+      el.remove();
+    }, 1250);
+    return () => {
+      clearTimeout(timer);
+      anim.cancel();
+      el.remove();
+    };
+  }, [analysis]);
 
   const groupedLayers = useMemo(() => {
     if (!analysis?.nodes) return [];
