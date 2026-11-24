@@ -42,8 +42,9 @@ function getGitHubHeaders(): Record<string, string> {
     "User-Agent": "RepoMap-AI",
     Accept: "application/vnd.github+json",
   };
-  if (process.env.GITHUB_TOKEN) {
-    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const token = process.env.GITHUB_TOKEN?.trim();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
   return headers;
 }
@@ -53,7 +54,6 @@ function parseGitHubUrl(input: string): { owner: string; repo: string } | null {
     const trimmed = input.trim().replace(/\/+$/, "");
     if (!trimmed) return null;
 
-    // Support shorthand like "sindresorhus/ky"
     if (/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(trimmed)) {
       const [owner, rawRepo] = trimmed.split("/");
       return { owner, repo: rawRepo.replace(/\.git$/i, "") };
@@ -193,7 +193,8 @@ function buildFallbackArchitecture(
   owner: string,
   repo: string,
   allPaths: string[],
-  selectedFiles: string[]
+  selectedFiles: string[],
+  reasonNote?: string
 ): ArchitectureResult {
   const cleanPaths = allPaths.filter((p) => !isNoisePath(p));
   const sourcePaths = cleanPaths.length > 0 ? cleanPaths : allPaths;
@@ -249,9 +250,13 @@ function buildFallbackArchitecture(
     .filter(Boolean)
     .slice(0, 3);
 
+  const note = reasonNote
+    ? `AI note: ${reasonNote.slice(0, 140)}`
+    : "GEMINI_API_KEY not found in environment";
+
   return {
     projectName: `${owner}/${repo}`,
-    summary: `Structural map of ${owner}/${repo} across ${allPaths.length} files (structured fallback view; verify GEMINI_API_KEY in Vercel for full AI synthesis).`,
+    summary: `Structural map of ${owner}/${repo} across ${allPaths.length} files (${note}).`,
     techStack: ["GitHub Repository", "Multi-File Codebase"],
     nodes:
       nodes.length > 0
@@ -439,7 +444,7 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) {
       return NextResponse.json(
         buildFallbackArchitecture(owner, repo, allFilePaths, selectedFiles)
@@ -467,9 +472,16 @@ Analyze this codebase and generate:
 3. Directed edges showing how data or requests flow between those nodes.
 4. The top 3 entry-point files a new developer should read first, in order, with concrete "reason" guidance on what to look for in each file.`;
 
-    const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const modelsToTry = Array.from(
+      new Set([
+        process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+      ])
+    );
 
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    let lastGeminiError = "";
+
+    for (const modelName of modelsToTry) {
       try {
         const response = await ai.models.generateContent({
           model: modelName,
@@ -538,7 +550,12 @@ Analyze this codebase and generate:
           },
         });
 
-        const parsedJson = JSON.parse(response.text || "{}");
+        const rawText = (response.text || "{}")
+          .replace(/^```json\s*/i, "")
+          .replace(/```$/i, "")
+          .trim();
+
+        const parsedJson = JSON.parse(rawText);
         const sanitized = sanitizeArchitecture(parsedJson, owner, repo, selectedFiles);
         if (!sanitized) {
           throw new Error("Invalid architecture JSON returned by model.");
@@ -546,18 +563,13 @@ Analyze this codebase and generate:
 
         return NextResponse.json(sanitized);
       } catch (apiErr) {
-        if (attempt === 2) {
-          console.warn("Gemini API temporarily unavailable, returning fallback graph:", apiErr);
-          return NextResponse.json(
-            buildFallbackArchitecture(owner, repo, allFilePaths, selectedFiles)
-          );
-        }
-        await new Promise((r) => setTimeout(r, 700));
+        lastGeminiError = apiErr instanceof Error ? apiErr.message : String(apiErr);
+        console.warn(`Model ${modelName} failed:`, lastGeminiError);
       }
     }
 
     return NextResponse.json(
-      buildFallbackArchitecture(owner, repo, allFilePaths, selectedFiles)
+      buildFallbackArchitecture(owner, repo, allFilePaths, selectedFiles, lastGeminiError)
     );
   } catch (error: unknown) {
     console.error("Analysis error:", error);
