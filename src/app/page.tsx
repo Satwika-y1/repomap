@@ -94,41 +94,147 @@ function getNodeFiles(node: ArchNode): string[] {
 }
 
 /**
- * Flowing Topographic & Liquid-Silk Violet Backdrop
- * Smooth organic contour lines + deep plum/violet/indigo silk waves with gentle cursor drift
+ * Interactive Nebula & Floating Code-Glyph Backdrop
+ * Soft violet/fuchsia/indigo nebula clouds + floating code tokens reacting to cursor movement
  */
-function LiquidContourBackdrop() {
-  const layerRef = useRef<HTMLDivElement | null>(null);
+function InteractiveGlyphNebulaBackdrop() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    let raf = 0;
-    let targetX = 0;
-    let targetY = 0;
-    let curX = 0;
-    let curY = 0;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animId = 0;
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const resize = () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+
+    const glyphs = ["{ }", "</>", "=>", "::", "[ ]", "fn()", "git", "ast"];
+    const colors = [
+      "192, 132, 252", // purple-400
+      "232, 121, 249", // fuchsia-400
+      "167, 139, 250", // violet-400
+      "129, 140, 248", // indigo-400
+    ];
+
+    const total = Math.min(34, Math.max(18, Math.floor((width * height) / 48000)));
+    const items = Array.from({ length: total }, (_, i) => ({
+      glyph: glyphs[i % glyphs.length],
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.34,
+      vy: (Math.random() - 0.5) * 0.34,
+      size: Math.random() * 4 + 11,
+      rgb: colors[i % colors.length],
+      phase: Math.random() * Math.PI * 2,
+      driftAngle: (Math.random() - 0.5) * 0.25,
+    }));
+
+    const pointer = { x: -9999, y: -9999, active: false };
 
     const onMove = (e: MouseEvent) => {
-      const nx = (e.clientX / Math.max(1, window.innerWidth) - 0.5) * 2;
-      const ny = (e.clientY / Math.max(1, window.innerHeight) - 0.5) * 2;
-      targetX = nx * 22;
-      targetY = ny * 16;
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      pointer.active = true;
     };
 
+    const onLeave = () => {
+      pointer.active = false;
+    };
+
+    window.addEventListener("resize", resize);
     window.addEventListener("mousemove", onMove, { passive: true });
+    window.addEventListener("mouseleave", onLeave);
 
     const tick = () => {
-      curX += (targetX - curX) * 0.045;
-      curY += (targetY - curY) * 0.045;
-      if (layerRef.current) {
-        layerRef.current.style.transform = `translate3d(${curX.toFixed(2)}px, ${curY.toFixed(2)}px, 0)`;
+      ctx.clearRect(0, 0, width, height);
+
+      // Soft reactive glow around pointer
+      if (pointer.active) {
+        const glow = ctx.createRadialGradient(
+          pointer.x,
+          pointer.y,
+          0,
+          pointer.x,
+          pointer.y,
+          240
+        );
+        glow.addColorStop(0, "rgba(192, 132, 252, 0.14)");
+        glow.addColorStop(0.55, "rgba(217, 70, 239, 0.05)");
+        glow.addColorStop(1, "rgba(6, 5, 15, 0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(pointer.x, pointer.y, 240, 0, Math.PI * 2);
+        ctx.fill();
       }
-      raf = window.requestAnimationFrame(tick);
+
+      for (const it of items) {
+        it.phase += 0.018;
+        it.vx *= 0.988;
+        it.vy *= 0.988;
+        if (Math.abs(it.vx) < 0.1) it.vx += (Math.random() - 0.5) * 0.025;
+        if (Math.abs(it.vy) < 0.1) it.vy += (Math.random() - 0.5) * 0.025;
+
+        let proximity = 0;
+        if (pointer.active) {
+          const dx = it.x - pointer.x;
+          const dy = it.y - pointer.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 185 && dist > 1) {
+            proximity = 1 - dist / 185;
+            // Gentle swirl & soft push away from cursor core
+            it.vx += (dx / dist) * proximity * 0.055 + (-dy / dist) * proximity * 0.022;
+            it.vy += (dy / dist) * proximity * 0.055 + (dx / dist) * proximity * 0.022;
+          }
+        }
+
+        it.x += it.vx;
+        it.y += it.vy;
+
+        if (it.x < -50) it.x = width + 50;
+        if (it.x > width + 50) it.x = -50;
+        if (it.y < -40) it.y = height + 40;
+        if (it.y > height + 40) it.y = -40;
+
+        const baseAlpha = 0.16 + Math.sin(it.phase) * 0.05 + proximity * 0.45;
+        ctx.save();
+        ctx.translate(it.x, it.y);
+        ctx.rotate(Math.sin(it.phase * 0.7) * 0.08 + it.driftAngle * 0.1);
+        ctx.font = `500 ${it.size.toFixed(0)}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        if (proximity > 0.15) {
+          ctx.shadowColor = `rgba(${it.rgb}, 0.65)`;
+          ctx.shadowBlur = 10 * proximity;
+        }
+        ctx.fillStyle = `rgba(${it.rgb}, ${Math.min(0.75, baseAlpha).toFixed(3)})`;
+        ctx.fillText(it.glyph, 0, 0);
+        ctx.restore();
+      }
+
+      animId = window.requestAnimationFrame(tick);
     };
 
-    raf = window.requestAnimationFrame(tick);
+    animId = window.requestAnimationFrame(tick);
+
     return () => {
-      window.cancelAnimationFrame(raf);
+      window.cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
       window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseleave", onLeave);
     };
   }, []);
 
@@ -137,89 +243,34 @@ function LiquidContourBackdrop() {
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-[#06050f]"
     >
-      {/* Rich plum, violet, and midnight-indigo silk washes */}
+      {/* Layered cosmic violet, plum & indigo nebula clouds */}
       <div
         className="absolute -top-48 left-1/4 h-[620px] w-[920px] rounded-full blur-[140px]"
         style={{
           background:
-            "radial-gradient(circle, rgba(147,51,234,0.34) 0%, rgba(107,33,168,0.16) 52%, rgba(6,5,15,0) 78%)",
-          animation: "rmSilkWaveA 16s ease-in-out infinite",
+            "radial-gradient(circle, rgba(168,85,247,0.34) 0%, rgba(107,33,168,0.16) 52%, rgba(6,5,15,0) 78%)",
+          animation: "rmNebulaDriftA 16s ease-in-out infinite",
         }}
       />
       <div
         className="absolute top-1/3 -right-28 h-[560px] w-[760px] rounded-full blur-[145px]"
         style={{
           background:
-            "radial-gradient(circle, rgba(192,38,211,0.22) 0%, rgba(79,70,229,0.14) 55%, rgba(6,5,15,0) 78%)",
-          animation: "rmSilkWaveB 20s ease-in-out infinite",
+            "radial-gradient(circle, rgba(217,70,239,0.24) 0%, rgba(79,70,229,0.15) 55%, rgba(6,5,15,0) 78%)",
+          animation: "rmNebulaDriftB 20s ease-in-out infinite",
         }}
       />
       <div
         className="absolute -bottom-44 left-10 h-[520px] w-[840px] rounded-full blur-[140px]"
         style={{
           background:
-            "radial-gradient(circle, rgba(124,58,237,0.26) 0%, rgba(59,7,100,0.14) 56%, rgba(6,5,15,0) 78%)",
-          animation: "rmSilkWaveA 24s ease-in-out reverse infinite",
+            "radial-gradient(circle, rgba(124,58,237,0.28) 0%, rgba(59,7,100,0.14) 56%, rgba(6,5,15,0) 78%)",
+          animation: "rmNebulaDriftA 24s ease-in-out reverse infinite",
         }}
       />
 
-      {/* Flowing topographic contour bands */}
-      <div
-        ref={layerRef}
-        className="absolute -inset-7 will-change-transform"
-      >
-        <svg
-          className="h-full w-full opacity-45"
-          viewBox="0 0 1440 900"
-          fill="none"
-          preserveAspectRatio="xMidYMid slice"
-        >
-          <defs>
-            <linearGradient id="rmContour1" x1="0%" y1="0%" x2="100%" y2="40%">
-              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.08" />
-              <stop offset="45%" stopColor="#d8b4fe" stopOpacity="0.42" />
-              <stop offset="100%" stopColor="#e879f9" stopOpacity="0.08" />
-            </linearGradient>
-            <linearGradient id="rmContour2" x1="0%" y1="100%" x2="100%" y2="20%">
-              <stop offset="0%" stopColor="#818cf8" stopOpacity="0.08" />
-              <stop offset="50%" stopColor="#c084fc" stopOpacity="0.34" />
-              <stop offset="100%" stopColor="#a855f7" stopOpacity="0.06" />
-            </linearGradient>
-          </defs>
-
-          <path
-            d="M -120 170 C 210 40, 520 310, 860 150 C 1140 20, 1320 190, 1580 95"
-            stroke="url(#rmContour1)"
-            strokeWidth="1.35"
-            style={{ animation: "rmPathGlideA 14s ease-in-out infinite" }}
-          />
-          <path
-            d="M -120 225 C 240 95, 550 365, 890 205 C 1170 75, 1350 245, 1580 150"
-            stroke="url(#rmContour1)"
-            strokeWidth="1.05"
-            style={{ animation: "rmPathGlideB 16s ease-in-out infinite" }}
-          />
-          <path
-            d="M -120 280 C 270 150, 580 420, 920 260 C 1200 130, 1380 300, 1580 205"
-            stroke="url(#rmContour2)"
-            strokeWidth="0.9"
-            style={{ animation: "rmPathGlideA 18s ease-in-out reverse infinite" }}
-          />
-
-          <path
-            d="M -120 650 C 250 500, 590 790, 940 580 C 1180 435, 1360 590, 1580 490"
-            stroke="url(#rmContour2)"
-            strokeWidth="1.3"
-            style={{ animation: "rmPathGlideB 15s ease-in-out infinite" }}
-          />
-          <path
-            d="M -120 710 C 280 560, 620 845, 970 635 C 1210 490, 1390 645, 1580 545"
-            stroke="url(#rmContour1)"
-            strokeWidth="1"
-            style={{ animation: "rmPathGlideA 19s ease-in-out infinite" }}
-          />
-        </svg>
-      </div>
+      {/* Interactive floating code glyphs */}
+      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
     </div>
   );
 }
@@ -652,7 +703,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#06050f] text-slate-100 flex flex-col relative overflow-x-hidden selection:bg-purple-500/30 antialiased">
-      <LiquidContourBackdrop />
+      <InteractiveGlyphNebulaBackdrop />
 
       {/* Smooth purple enter/exit transition overlay */}
       {showPurpleFade && (
@@ -676,21 +727,13 @@ export default function HomePage() {
           68% { opacity: 0.55; }
           100% { opacity: 0; }
         }
-        @keyframes rmSilkWaveA {
+        @keyframes rmNebulaDriftA {
           0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
           50% { transform: translate3d(42px, 24px, 0) scale(1.07); }
         }
-        @keyframes rmSilkWaveB {
+        @keyframes rmNebulaDriftB {
           0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
           50% { transform: translate3d(-36px, -20px, 0) scale(1.06); }
-        }
-        @keyframes rmPathGlideA {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        @keyframes rmPathGlideB {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(10px); }
         }
         @keyframes rmFadeSlide {
           0% { opacity: 0; transform: translateY(8px); }
