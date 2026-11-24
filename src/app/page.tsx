@@ -42,36 +42,31 @@ interface ArchitectureResult {
 
 const LAYER_STYLES: Record<
   string,
-  { badge: string; dot: string; border: string; pillActive: string }
+  { badge: string; border: string; pillActive: string }
 > = {
   frontend: {
     badge: "bg-purple-500/15 text-purple-200 border-purple-400/25",
-    dot: "bg-purple-400",
-    border: "border-purple-400/25 hover:border-purple-300/50",
+    border: "border-purple-400/20 hover:border-purple-300/45",
     pillActive: "bg-purple-500/25 text-purple-100 border-purple-400/50",
   },
   api: {
     badge: "bg-fuchsia-500/15 text-fuchsia-200 border-fuchsia-400/25",
-    dot: "bg-fuchsia-400",
-    border: "border-fuchsia-400/25 hover:border-fuchsia-300/50",
+    border: "border-fuchsia-400/20 hover:border-fuchsia-300/45",
     pillActive: "bg-fuchsia-500/25 text-fuchsia-100 border-fuchsia-400/50",
   },
   logic: {
     badge: "bg-violet-500/15 text-violet-200 border-violet-400/25",
-    dot: "bg-violet-400",
-    border: "border-violet-400/25 hover:border-violet-300/50",
+    border: "border-violet-400/20 hover:border-violet-300/45",
     pillActive: "bg-violet-500/25 text-violet-100 border-violet-400/50",
   },
   database: {
     badge: "bg-indigo-500/15 text-indigo-200 border-indigo-400/25",
-    dot: "bg-indigo-400",
-    border: "border-indigo-400/25 hover:border-indigo-300/50",
+    border: "border-indigo-400/20 hover:border-indigo-300/45",
     pillActive: "bg-indigo-500/25 text-indigo-100 border-indigo-400/50",
   },
   config: {
     badge: "bg-slate-500/15 text-slate-200 border-slate-400/25",
-    dot: "bg-slate-400",
-    border: "border-slate-400/25 hover:border-slate-300/50",
+    border: "border-slate-400/20 hover:border-slate-300/45",
     pillActive: "bg-slate-500/25 text-slate-100 border-slate-400/50",
   },
 };
@@ -106,13 +101,14 @@ function TiltCard({
     const rect = el.getBoundingClientRect();
     const px = (e.clientX - rect.left) / rect.width - 0.5;
     const py = (e.clientY - rect.top) / rect.height - 0.5;
-    el.style.transform = `perspective(900px) rotateX(${(-py * 5).toFixed(2)}deg) rotateY(${(px * 6).toFixed(2)}deg) translateY(-2px)`;
+    el.style.transform = `perspective(900px) rotateX(${(-py * 4).toFixed(2)}deg) rotateY(${(px * 5).toFixed(2)}deg) translateY(-2px)`;
   };
 
   const handleLeave = () => {
     const el = ref.current;
     if (!el) return;
-    el.style.transform = "perspective(900px) rotateX(0deg) rotateY(0deg) translateY(0px)";
+    el.style.transform =
+      "perspective(900px) rotateX(0deg) rotateY(0deg) translateY(0px)";
   };
 
   return (
@@ -138,22 +134,39 @@ export default function HomePage() {
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
   const [fadeKey, setFadeKey] = useState(0);
   const [showPurpleFade, setShowPurpleFade] = useState(false);
+
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const prevLoadingRef = useRef(false);
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("repomap_recent_repos") || "[]");
+      const saved = JSON.parse(
+        localStorage.getItem("repomap_recent_repos") || "[]"
+      );
       if (Array.isArray(saved)) {
-        setRecentRepos(saved.filter((x): x is string => typeof x === "string").slice(0, 5));
+        setRecentRepos(
+          saved.filter((x): x is string => typeof x === "string").slice(0, 5)
+        );
       }
     } catch {
       // Ignore storage errors
     }
   }, []);
 
+  // Trigger soft purple fade both when loading appears AND when it disappears
+  useEffect(() => {
+    const wasLoading = prevLoadingRef.current;
+    prevLoadingRef.current = loading;
+
+    if (wasLoading !== loading) {
+      setFadeKey((k) => k + 1);
+      setShowPurpleFade(true);
+    }
+  }, [loading]);
+
   useEffect(() => {
     if (!showPurpleFade) return;
-    const t = window.setTimeout(() => setShowPurpleFade(false), 3200);
+    const t = window.setTimeout(() => setShowPurpleFade(false), 2600);
     return () => window.clearTimeout(t);
   }, [showPurpleFade, fadeKey]);
 
@@ -205,11 +218,11 @@ export default function HomePage() {
       setAnalysis(parsed);
       setSelectedNodeId(parsed.nodes?.[0]?.id ?? null);
       saveRecentRepo(urlToAnalyze);
-      setFadeKey((k) => k + 1);
-      setShowPurpleFade(true);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
-        setError("Analysis took longer than 9s—try again or pick a smaller public repo.");
+        setError(
+          "Analysis took longer than 9s—try again or pick a smaller public repo."
+        );
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }
@@ -225,7 +238,6 @@ export default function HomePage() {
     setLayerFilter(null);
     setError(null);
     setRepoUrl("");
-    setShowPurpleFade(false);
   };
 
   const handleCopyPath = async (filePath: string) => {
@@ -281,7 +293,9 @@ export default function HomePage() {
       const count = analysis.nodes?.length || 0;
       return `${analysis.projectName} maps ${count} core modules across its codebase—start with Step 1 below to see how requests flow from entry to logic.`;
     }
-    const firstSentence = stripped.replace(/^step\s*\d+:\s*/i, "").split(/(?<=[.!?])\s+/)[0];
+    const firstSentence = stripped
+      .replace(/^step\s*\d+:\s*/i, "")
+      .split(/(?<=[.!?])\s+/)[0];
     return firstSentence || stripped.slice(0, 160);
   }, [analysis]);
 
@@ -289,54 +303,59 @@ export default function HomePage() {
     const firstStep = analysis?.onboardingSteps?.[0];
     return [
       {
-        num: "1",
+        num: "01",
         title: "Install & Env",
-        detail: "Check dependencies, scripts, and required environment variables first.",
+        detail:
+          "Check package.json scripts, dependencies, and required env keys first.",
       },
       {
-        num: "2",
+        num: "02",
         title: "Entry File",
         detail: firstStep
-          ? `Start at ${firstStep.filePath} — ${firstStep.reason}`
-          : "Open the primary entry file to see how the app boots.",
+          ? `Open ${firstStep.filePath} — ${firstStep.reason}`
+          : "Open #1 under Where to Start Reading to see how the app boots.",
       },
       {
-        num: "3",
+        num: "03",
         title: "Request Flow",
-        detail: "Trace UI components to API routes, business logic, and data layers.",
+        detail:
+          "Trace UI components into API routes, core logic, and data layers.",
       },
       {
-        num: "4",
+        num: "04",
         title: "Inspect Modules",
-        detail: "Select any module card or edge connection to read responsibilities & files.",
+        detail:
+          "Click any module card below to view its files and connections.",
       },
     ];
   }, [analysis]);
 
   return (
     <div className="min-h-screen bg-[#060913] text-slate-100 flex flex-col relative overflow-x-hidden selection:bg-purple-500/30">
-      {/* Soft ambient purple background aura */}
+      {/* Soft purple ambient light behind panels that gently breathes/reappears */}
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
       >
         <div
-          className="absolute -top-32 left-1/2 -translate-x-1/2 h-[420px] w-[780px] rounded-full blur-3xl"
+          className="absolute -top-24 left-1/2 -translate-x-1/2 h-[440px] w-[820px] rounded-full blur-3xl"
           style={{
             background:
-              "radial-gradient(circle, rgba(168,85,247,0.16) 0%, rgba(109,40,217,0.08) 50%, rgba(6,9,19,0) 75%)",
+              "radial-gradient(circle, rgba(168,85,247,0.14) 0%, rgba(109,40,217,0.06) 52%, rgba(6,9,19,0) 78%)",
+            animation: "repomapSoftAura 9s ease-in-out infinite",
           }}
         />
         <div
-          className="absolute bottom-0 right-0 h-[320px] w-[520px] rounded-full blur-3xl"
+          className="absolute bottom-8 right-10 h-[360px] w-[540px] rounded-full blur-3xl"
           style={{
             background:
-              "radial-gradient(circle, rgba(139,92,246,0.11) 0%, rgba(6,9,19,0) 72%)",
+              "radial-gradient(circle, rgba(139,92,246,0.11) 0%, rgba(126,34,206,0.04) 55%, rgba(6,9,19,0) 76%)",
+            animation: "repomapSoftAura 11s ease-in-out 2.5s infinite",
           }}
         />
       </div>
 
-      {/* Gentle purple fade-in / fade-out overlay when analysis completes */}
+      {/* Smooth, soft purple fade-in & fade-out on loading appear and disappear */}
       {showPurpleFade && (
         <div
           key={fadeKey}
@@ -344,8 +363,8 @@ export default function HomePage() {
           className="pointer-events-none fixed inset-0 z-40"
           style={{
             background:
-              "radial-gradient(ellipse 75% 55% at 50% 35%, rgba(168,85,247,0.15) 0%, rgba(126,34,206,0.07) 48%, rgba(6,9,19,0) 80%)",
-            animation: "repomapGentleFade 3.2s ease-in-out forwards",
+              "radial-gradient(ellipse 78% 58% at 50% 38%, rgba(168,85,247,0.13) 0%, rgba(126,34,206,0.06) 48%, rgba(6,9,19,0) 82%)",
+            animation: "repomapGentleFade 2.6s ease-in-out forwards",
           }}
         />
       )}
@@ -353,9 +372,13 @@ export default function HomePage() {
       <style>{`
         @keyframes repomapGentleFade {
           0% { opacity: 0; }
-          28% { opacity: 1; }
-          68% { opacity: 0.5; }
+          32% { opacity: 1; }
+          68% { opacity: 0.45; }
           100% { opacity: 0; }
+        }
+        @keyframes repomapSoftAura {
+          0%, 100% { opacity: 0.35; transform: scale(0.98); }
+          50% { opacity: 0.9; transform: scale(1.04); }
         }
       `}</style>
 
@@ -388,7 +411,7 @@ export default function HomePage() {
               type="text"
               value={repoUrl}
               onChange={(e) => setRepoUrl(e.target.value)}
-              placeholder="Paste GitHub URL or owner/repo (e.g. vercel/next.js)"
+              placeholder="Paste GitHub URL or owner/repo (e.g. shadcn-ui/taxonomy)"
               className="w-full rounded-xl bg-white/[0.04] border border-white/[0.1] px-3.5 py-2 text-xs sm:text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-purple-400/60"
             />
             <button
@@ -420,20 +443,20 @@ export default function HomePage() {
         )}
 
         {loading && (
-          <div className="rounded-2xl border border-purple-400/20 bg-white/[0.02] p-8 text-center space-y-2">
-            <div className="inline-block h-5 w-5 rounded-full border-2 border-purple-400/30 border-t-purple-300 animate-spin" />
+          <div className="rounded-2xl border border-purple-400/20 bg-white/[0.025] backdrop-blur-md p-10 text-center space-y-2.5">
+            <div className="inline-block h-6 w-6 rounded-full border-2 border-purple-400/30 border-t-purple-300 animate-spin" />
             <p className="text-sm font-medium text-purple-100">
               Mapping repository structure...
             </p>
             <p className="text-xs text-slate-400">
-              Grouping modules, layers, and beginner reading steps
+              Organizing modules, layers, and beginner walkthrough steps
             </p>
           </div>
         )}
 
         {!loading && !analysis && (
           <section className="space-y-6">
-            <div className="rounded-2xl border border-purple-400/20 bg-gradient-to-br from-purple-500/10 via-white/[0.02] to-transparent p-6 sm:p-8">
+            <div className="rounded-2xl border border-purple-400/20 bg-gradient-to-br from-purple-500/10 via-white/[0.02] to-transparent backdrop-blur-md p-6 sm:p-8">
               <span className="inline-block rounded-full border border-purple-400/30 bg-purple-500/15 px-3 py-1 font-mono text-[11px] text-purple-200 mb-3">
                 Beginner-Friendly Repo Explorer
               </span>
@@ -441,7 +464,8 @@ export default function HomePage() {
                 Understand any codebase before reading every file
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed mb-5">
-                Enter a public GitHub repository to generate a module map, layer breakdown, starter reading order, and a 2×2 orientation guide.
+                Enter a public GitHub repository to generate a module map, layer
+                breakdown, starter reading order, and a 2×2 orientation guide.
               </p>
 
               {recentRepos.length > 0 && (
@@ -470,15 +494,19 @@ export default function HomePage() {
               {walkthroughSteps.map((step) => (
                 <TiltCard
                   key={step.num}
-                  className="rounded-2xl border border-purple-400/15 bg-white/[0.025] p-4"
+                  className="rounded-2xl border border-purple-400/15 bg-white/[0.025] backdrop-blur-md p-4"
                 >
                   <div className="flex items-center gap-2.5 mb-1.5">
-                    <span className="h-6 w-6 rounded-lg bg-purple-500/20 border border-purple-400/30 flex items-center justify-center font-mono text-xs font-semibold text-purple-200">
+                    <span className="h-6 min-w-6 px-1.5 rounded-lg bg-purple-500/20 border border-purple-400/30 flex items-center justify-center font-mono text-[11px] font-semibold text-purple-200">
                       {step.num}
                     </span>
-                    <h3 className="text-sm font-medium text-white">{step.title}</h3>
+                    <h3 className="text-sm font-medium text-white">
+                      {step.title}
+                    </h3>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">{step.detail}</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    {step.detail}
+                  </p>
                 </TiltCard>
               ))}
             </div>
@@ -489,11 +517,11 @@ export default function HomePage() {
           <section className="space-y-6">
             {/* Project Overview + 2x2 Beginner Walkthrough */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-              <TiltCard className="lg:col-span-5 rounded-2xl border border-purple-400/25 bg-gradient-to-br from-purple-500/12 via-violet-500/[0.05] to-transparent p-5 flex flex-col justify-between">
+              <TiltCard className="lg:col-span-5 rounded-2xl border border-purple-400/25 bg-gradient-to-br from-purple-500/12 via-violet-500/[0.05] to-transparent backdrop-blur-md p-5 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="font-mono text-[11px] uppercase tracking-wider text-purple-300">
-                      Repository Overview
+                      Quick Walkthrough
                     </span>
                     <span className="font-mono text-[11px] text-slate-400">
                       {analysis.nodes?.length || 0} modules
@@ -507,18 +535,19 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                {Array.isArray(analysis.techStack) && analysis.techStack.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-2 border-t border-white/[0.07]">
-                    {analysis.techStack.slice(0, 8).map((tech) => (
-                      <span
-                        key={tech}
-                        className="rounded-md border border-purple-400/20 bg-purple-500/10 px-2 py-0.5 font-mono text-[11px] text-purple-200"
-                      >
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {Array.isArray(analysis.techStack) &&
+                  analysis.techStack.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-2 border-t border-white/[0.07]">
+                      {analysis.techStack.slice(0, 8).map((tech) => (
+                        <span
+                          key={tech}
+                          className="rounded-md border border-purple-400/20 bg-purple-500/10 px-2 py-0.5 font-mono text-[11px] text-purple-200"
+                        >
+                          {tech}
+                        </span>
+                      ))}
+                    </div>
+                  )}
               </TiltCard>
 
               {/* 2x2 Beginner Walkthrough Grid */}
@@ -526,10 +555,10 @@ export default function HomePage() {
                 {walkthroughSteps.map((step) => (
                   <TiltCard
                     key={step.num}
-                    className="rounded-2xl border border-purple-400/15 bg-white/[0.025] hover:border-purple-400/35 p-4"
+                    className="rounded-2xl border border-purple-400/15 bg-white/[0.025] hover:border-purple-400/35 backdrop-blur-md p-4"
                   >
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className="h-5 w-5 rounded-md bg-purple-500/20 border border-purple-400/30 flex items-center justify-center font-mono text-[11px] font-semibold text-purple-200">
+                      <span className="h-5 min-w-5 px-1.5 rounded-md bg-purple-500/20 border border-purple-400/30 flex items-center justify-center font-mono text-[10px] font-semibold text-purple-200">
                         {step.num}
                       </span>
                       <h3 className="text-xs sm:text-sm font-medium text-white">
@@ -594,10 +623,10 @@ export default function HomePage() {
                         key={node.id}
                         type="button"
                         onClick={() => setSelectedNodeId(node.id)}
-                        className={`text-left rounded-2xl border p-4 transition-all ${
+                        className={`text-left rounded-2xl border p-4 backdrop-blur-md transition-all ${
                           isSelected
                             ? "border-purple-400/60 bg-purple-500/12"
-                            : `${st.border} bg-white/[0.02] hover:bg-white/[0.04]`
+                            : `${st.border} bg-white/[0.025] hover:bg-white/[0.04]`
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -611,7 +640,9 @@ export default function HomePage() {
                           </span>
                         </div>
                         <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
-                          {node.role || node.description || "Core repository module"}
+                          {node.role ||
+                            node.description ||
+                            "Core repository module"}
                         </p>
                       </button>
                     );
@@ -622,7 +653,7 @@ export default function HomePage() {
               {/* Right: Selected Module Details + Onboarding Steps */}
               <aside className="lg:col-span-5 space-y-4">
                 {selectedNode && (
-                  <div className="rounded-2xl border border-white/[0.09] bg-white/[0.025] p-4 space-y-3">
+                  <div className="rounded-2xl border border-white/[0.09] bg-white/[0.025] backdrop-blur-md p-4 space-y-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-[11px] uppercase tracking-wider text-purple-300">
                         Module Inspector
@@ -642,7 +673,9 @@ export default function HomePage() {
 
                     {getNodeFiles(selectedNode).length > 0 && (
                       <div className="space-y-1.5 pt-2 border-t border-white/[0.07]">
-                        <p className="font-mono text-[11px] text-slate-400">Files</p>
+                        <p className="font-mono text-[11px] text-slate-400">
+                          Files
+                        </p>
                         <div className="space-y-1">
                           {getNodeFiles(selectedNode).map((file) => (
                             <div
@@ -676,7 +709,8 @@ export default function HomePage() {
                               key={edge.id || idx}
                               className="rounded-lg bg-white/[0.02] px-2.5 py-1.5 font-mono text-[11px] text-slate-300"
                             >
-                              {edge.source || edge.from} → {edge.target || edge.to}
+                              {edge.source || edge.from} →{" "}
+                              {edge.target || edge.to}
                               {edge.label ? ` (${edge.label})` : ""}
                             </div>
                           ))}
@@ -688,7 +722,7 @@ export default function HomePage() {
 
                 {Array.isArray(analysis.onboardingSteps) &&
                   analysis.onboardingSteps.length > 0 && (
-                    <div className="rounded-2xl border border-white/[0.09] bg-white/[0.025] p-4 space-y-2.5">
+                    <div className="rounded-2xl border border-white/[0.09] bg-white/[0.025] backdrop-blur-md p-4 space-y-2.5">
                       <h3 className="font-mono text-[11px] uppercase tracking-wider text-purple-300">
                         Where to Start Reading
                       </h3>
@@ -704,10 +738,14 @@ export default function HomePage() {
                               </span>
                               <button
                                 type="button"
-                                onClick={() => void handleCopyPath(item.filePath)}
+                                onClick={() =>
+                                  void handleCopyPath(item.filePath)
+                                }
                                 className="shrink-0 font-mono text-[10px] text-slate-400 hover:text-purple-200"
                               >
-                                {copiedPath === item.filePath ? "Copied" : "Copy"}
+                                {copiedPath === item.filePath
+                                  ? "Copied"
+                                  : "Copy"}
                               </button>
                             </div>
                             <p className="text-xs text-slate-400 leading-relaxed">
