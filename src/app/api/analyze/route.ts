@@ -483,7 +483,10 @@ Analyze this codebase and generate:
 
     for (const modelName of modelsToTry) {
       try {
-        const response = await ai.models.generateContent({
+        let response;
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              response = await const response = await ai.models.generateContent({
           model: modelName,
           contents: prompt,
           config: {
@@ -549,6 +552,12 @@ Analyze this codebase and generate:
             },
           },
         });
+              break;
+            } catch (e) {
+              if (attempt === 1 || !String(e).includes("503")) throw e;
+              await new Promise((r) => setTimeout(r, 800));
+            }
+          }
 
         const rawText = (response.text || "{}")
           .replace(/^```json\s*/i, "")
