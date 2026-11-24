@@ -378,6 +378,16 @@ export default function HomePage() {
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
   const [fadeKey, setFadeKey] = useState(0);
   const [showPurpleFade, setShowPurpleFade] = useState(false);
+  const [askQuestion, setAskQuestion] = useState("");
+  const [askTyping, setAskTyping] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [askError, setAskError] = useState<string | null>(null);
+  const [askReply, setAskReply] = useState<{
+    question: string;
+    answer: string;
+    referencedNodeIds: string[];
+    referencedFiles: string[];
+  } | null>(null);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const prevLoadingRef = useRef(false);
@@ -526,6 +536,51 @@ export default function HomePage() {
     setError(null);
     setRepoUrl("");
     setIsTyping(false);
+    setAskQuestion("");
+    setAskTyping(false);
+    setAskError(null);
+    setAskReply(null);
+  };
+
+  const handleAskQuestion = async (customQ?: string) => {
+    const q = (customQ ?? askQuestion).trim();
+    if (!q || !analysis) return;
+
+    setAskTyping(false);
+    setAsking(true);
+    setAskError(null);
+
+    try {
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q, analysis }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || "Could not answer question.");
+      }
+      const refIds = Array.isArray(data?.referencedNodeIds)
+        ? data.referencedNodeIds.filter((x: unknown): x is string => typeof x === "string")
+        : [];
+      const refFiles = Array.isArray(data?.referencedFiles)
+        ? data.referencedFiles.filter((x: unknown): x is string => typeof x === "string")
+        : [];
+
+      setAskReply({
+        question: q,
+        answer: String(data?.answer || "No answer returned."),
+        referencedNodeIds: refIds,
+        referencedFiles: refFiles,
+      });
+      if (refIds[0]) {
+        setSelectedNodeId(refIds[0]);
+      }
+    } catch (err) {
+      setAskError(err instanceof Error ? err.message : "Assistant error.");
+    } finally {
+      setAsking(false);
+    }
   };
 
   const handleCopyPath = async (filePath: string) => {
