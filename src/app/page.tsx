@@ -94,6 +94,137 @@ function getNodeFiles(node: ArchNode): string[] {
 }
 
 /**
+ * Flowing Topographic & Liquid-Silk Violet Backdrop
+ * Smooth organic contour lines + deep plum/violet/indigo silk waves with gentle cursor drift
+ */
+function LiquidContourBackdrop() {
+  const layerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let raf = 0;
+    let targetX = 0;
+    let targetY = 0;
+    let curX = 0;
+    let curY = 0;
+
+    const onMove = (e: MouseEvent) => {
+      const nx = (e.clientX / Math.max(1, window.innerWidth) - 0.5) * 2;
+      const ny = (e.clientY / Math.max(1, window.innerHeight) - 0.5) * 2;
+      targetX = nx * 22;
+      targetY = ny * 16;
+    };
+
+    window.addEventListener("mousemove", onMove, { passive: true });
+
+    const tick = () => {
+      curX += (targetX - curX) * 0.045;
+      curY += (targetY - curY) * 0.045;
+      if (layerRef.current) {
+        layerRef.current.style.transform = `translate3d(${curX.toFixed(2)}px, ${curY.toFixed(2)}px, 0)`;
+      }
+      raf = window.requestAnimationFrame(tick);
+    };
+
+    raf = window.requestAnimationFrame(tick);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener("mousemove", onMove);
+    };
+  }, []);
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-[#06050f]"
+    >
+      {/* Rich plum, violet, and midnight-indigo silk washes */}
+      <div
+        className="absolute -top-48 left-1/4 h-[620px] w-[920px] rounded-full blur-[140px]"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(147,51,234,0.34) 0%, rgba(107,33,168,0.16) 52%, rgba(6,5,15,0) 78%)",
+          animation: "rmSilkWaveA 16s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="absolute top-1/3 -right-28 h-[560px] w-[760px] rounded-full blur-[145px]"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(192,38,211,0.22) 0%, rgba(79,70,229,0.14) 55%, rgba(6,5,15,0) 78%)",
+          animation: "rmSilkWaveB 20s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="absolute -bottom-44 left-10 h-[520px] w-[840px] rounded-full blur-[140px]"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(124,58,237,0.26) 0%, rgba(59,7,100,0.14) 56%, rgba(6,5,15,0) 78%)",
+          animation: "rmSilkWaveA 24s ease-in-out reverse infinite",
+        }}
+      />
+
+      {/* Flowing topographic contour bands */}
+      <div
+        ref={layerRef}
+        className="absolute -inset-7 will-change-transform"
+      >
+        <svg
+          className="h-full w-full opacity-45"
+          viewBox="0 0 1440 900"
+          fill="none"
+          preserveAspectRatio="xMidYMid slice"
+        >
+          <defs>
+            <linearGradient id="rmContour1" x1="0%" y1="0%" x2="100%" y2="40%">
+              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.08" />
+              <stop offset="45%" stopColor="#d8b4fe" stopOpacity="0.42" />
+              <stop offset="100%" stopColor="#e879f9" stopOpacity="0.08" />
+            </linearGradient>
+            <linearGradient id="rmContour2" x1="0%" y1="100%" x2="100%" y2="20%">
+              <stop offset="0%" stopColor="#818cf8" stopOpacity="0.08" />
+              <stop offset="50%" stopColor="#c084fc" stopOpacity="0.34" />
+              <stop offset="100%" stopColor="#a855f7" stopOpacity="0.06" />
+            </linearGradient>
+          </defs>
+
+          <path
+            d="M -120 170 C 210 40, 520 310, 860 150 C 1140 20, 1320 190, 1580 95"
+            stroke="url(#rmContour1)"
+            strokeWidth="1.35"
+            style={{ animation: "rmPathGlideA 14s ease-in-out infinite" }}
+          />
+          <path
+            d="M -120 225 C 240 95, 550 365, 890 205 C 1170 75, 1350 245, 1580 150"
+            stroke="url(#rmContour1)"
+            strokeWidth="1.05"
+            style={{ animation: "rmPathGlideB 16s ease-in-out infinite" }}
+          />
+          <path
+            d="M -120 280 C 270 150, 580 420, 920 260 C 1200 130, 1380 300, 1580 205"
+            stroke="url(#rmContour2)"
+            strokeWidth="0.9"
+            style={{ animation: "rmPathGlideA 18s ease-in-out reverse infinite" }}
+          />
+
+          <path
+            d="M -120 650 C 250 500, 590 790, 940 580 C 1180 435, 1360 590, 1580 490"
+            stroke="url(#rmContour2)"
+            strokeWidth="1.3"
+            style={{ animation: "rmPathGlideB 15s ease-in-out infinite" }}
+          />
+          <path
+            d="M -120 710 C 280 560, 620 845, 970 635 C 1210 490, 1390 645, 1580 545"
+            stroke="url(#rmContour1)"
+            strokeWidth="1"
+            style={{ animation: "rmPathGlideA 19s ease-in-out infinite" }}
+          />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+/**
  * 3D Interactive Search Bar with Glowing Typing Indicator
  */
 function SearchBar3D({
@@ -141,7 +272,9 @@ function SearchBar3D({
         e.preventDefault();
         onSubmit();
       }}
-      className={compact ? "flex-1 max-w-xl" : "relative max-w-2xl mx-auto pt-2"}
+      className={
+        compact ? "flex-1 max-w-xl" : "relative max-w-2xl mx-auto pt-2"
+      }
     >
       <div
         ref={boxRef}
@@ -149,7 +282,6 @@ function SearchBar3D({
         onMouseLeave={handleLeave}
         className="relative transition-transform duration-200 ease-out will-change-transform"
       >
-        {/* Glowing aura that brightens when typing */}
         <div
           aria-hidden="true"
           className={`pointer-events-none absolute -inset-1.5 rounded-2xl bg-gradient-to-r from-purple-500/45 via-fuchsia-500/40 to-indigo-500/45 blur-xl transition-opacity duration-300 ${
@@ -159,8 +291,10 @@ function SearchBar3D({
 
         <div
           className={`relative flex ${
-            compact ? "flex-row items-center gap-2 p-1.5" : "flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2"
-          } rounded-2xl border bg-[#080c1a]/90 transition-all duration-300 ${
+            compact
+              ? "flex-row items-center gap-2 p-1.5"
+              : "flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2"
+          } rounded-2xl border bg-[#090818]/80 transition-all duration-300 ${
             isTyping
               ? "border-fuchsia-400/75 shadow-[0_14px_38px_rgba(168,85,247,0.34),inset_0_1px_0_rgba(255,255,255,0.14)]"
               : "border-purple-400/40 shadow-[0_10px_30px_rgba(147,51,234,0.2),inset_0_1px_0_rgba(255,255,255,0.08)]"
@@ -193,7 +327,6 @@ function SearchBar3D({
               }`}
             />
 
-            {/* Glowing Typing Indicator */}
             <div
               className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono text-[10px] transition-all duration-300 ${
                 isTyping
@@ -226,119 +359,7 @@ function SearchBar3D({
 }
 
 /**
- * Interactive Architectural Field Background
- * Clean geometric SVG lattice + soft breathing purple light blooms + smooth cursor shift
- */
-function InteractiveFieldBackdrop() {
-  const fieldRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    let raf = 0;
-    let targetX = 0;
-    let targetY = 0;
-    let curX = 0;
-    let curY = 0;
-
-    const onMove = (e: MouseEvent) => {
-      const nx = (e.clientX / Math.max(1, window.innerWidth) - 0.5) * 2;
-      const ny = (e.clientY / Math.max(1, window.innerHeight) - 0.5) * 2;
-      targetX = nx * 18;
-      targetY = ny * 14;
-    };
-
-    window.addEventListener("mousemove", onMove, { passive: true });
-
-    const animate = () => {
-      curX += (targetX - curX) * 0.05;
-      curY += (targetY - curY) * 0.05;
-      if (fieldRef.current) {
-        fieldRef.current.style.transform = `translate3d(${curX.toFixed(2)}px, ${curY.toFixed(2)}px, 0)`;
-      }
-      raf = window.requestAnimationFrame(animate);
-    };
-
-    raf = window.requestAnimationFrame(animate);
-    return () => {
-      window.cancelAnimationFrame(raf);
-      window.removeEventListener("mousemove", onMove);
-    };
-  }, []);
-
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
-    >
-      <div
-        className="absolute -top-32 left-1/2 -translate-x-1/2 h-[500px] w-[920px] rounded-full blur-[120px]"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(168,85,247,0.22) 0%, rgba(109,40,217,0.09) 52%, rgba(5,8,18,0) 78%)",
-          animation: "repomapBloomPulse 9s ease-in-out infinite",
-        }}
-      />
-      <div
-        className="absolute bottom-0 right-0 h-[400px] w-[620px] rounded-full blur-[130px]"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(139,92,246,0.16) 0%, rgba(79,70,229,0.07) 55%, rgba(5,8,18,0) 78%)",
-          animation: "repomapBloomPulse 12s ease-in-out 3s infinite",
-        }}
-      />
-
-      <div
-        ref={fieldRef}
-        className="absolute -inset-6 will-change-transform transition-none"
-      >
-        <div
-          className="absolute inset-0 opacity-[0.14]"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, rgba(168,85,247,0.28) 1px, transparent 1px), linear-gradient(to bottom, rgba(168,85,247,0.22) 1px, transparent 1px)",
-            backgroundSize: "64px 64px",
-          }}
-        />
-
-        <svg
-          className="absolute inset-0 h-full w-full opacity-35"
-          viewBox="0 0 1440 900"
-          fill="none"
-          preserveAspectRatio="xMidYMid slice"
-        >
-          <path
-            d="M -80 240 C 260 110, 540 390, 880 210 C 1120 85, 1310 190, 1520 130"
-            stroke="url(#rmGradA)"
-            strokeWidth="1.2"
-          />
-          <path
-            d="M -60 620 C 310 470, 620 760, 990 540 C 1200 415, 1340 520, 1520 460"
-            stroke="url(#rmGradB)"
-            strokeWidth="1.2"
-          />
-          <circle cx="340" cy="215" r="3.5" fill="#c084fc" fillOpacity="0.65" />
-          <circle cx="880" cy="210" r="4" fill="#e879f9" fillOpacity="0.65" />
-          <circle cx="620" cy="635" r="3.5" fill="#a78bfa" fillOpacity="0.6" />
-          <circle cx="1140" cy="475" r="3.5" fill="#818cf8" fillOpacity="0.6" />
-          <defs>
-            <linearGradient id="rmGradA" x1="0" y1="0" x2="1440" y2="0">
-              <stop offset="0%" stopColor="#a855f7" stopOpacity="0" />
-              <stop offset="50%" stopColor="#c084fc" stopOpacity="0.7" />
-              <stop offset="100%" stopColor="#e879f9" stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id="rmGradB" x1="0" y1="0" x2="1440" y2="0">
-              <stop offset="0%" stopColor="#818cf8" stopOpacity="0" />
-              <stop offset="50%" stopColor="#a855f7" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#c084fc" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Translucent panel with a soft purple glow behind it and crisp, unblurred text
+ * Crisp Translucent Panel with a Soft Purple Halo Behind It
  */
 function Panel({
   children,
@@ -354,10 +375,10 @@ function Panel({
         className="pointer-events-none absolute -inset-1.5 rounded-3xl opacity-65 group-hover:opacity-95 transition-opacity duration-500 blur-xl"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 35%, rgba(168,85,247,0.24) 0%, rgba(126,34,206,0.10) 58%, rgba(5,8,18,0) 84%)",
+            "radial-gradient(ellipse at 50% 35%, rgba(168,85,247,0.24) 0%, rgba(126,34,206,0.10) 58%, rgba(6,5,15,0) 84%)",
         }}
       />
-      <div className="relative h-full rounded-2xl border border-purple-400/25 bg-[#090d1c]/65 shadow-[0_0_28px_rgba(147,51,234,0.12)]">
+      <div className="relative h-full rounded-2xl border border-purple-400/25 bg-[#0b091c]/60 shadow-[0_0_28px_rgba(147,51,234,0.12)]">
         <div className="relative h-full">{children}</div>
       </div>
     </div>
@@ -378,16 +399,6 @@ export default function HomePage() {
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
   const [fadeKey, setFadeKey] = useState(0);
   const [showPurpleFade, setShowPurpleFade] = useState(false);
-  const [askQuestion, setAskQuestion] = useState("");
-  const [askTyping, setAskTyping] = useState(false);
-  const [asking, setAsking] = useState(false);
-  const [askError, setAskError] = useState<string | null>(null);
-  const [askReply, setAskReply] = useState<{
-    question: string;
-    answer: string;
-    referencedNodeIds: string[];
-    referencedFiles: string[];
-  } | null>(null);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const prevLoadingRef = useRef(false);
@@ -425,7 +436,6 @@ export default function HomePage() {
     }, 900);
   };
 
-  // Gentle purple enter/exit fade when loading appears and disappears
   useEffect(() => {
     const wasLoading = prevLoadingRef.current;
     prevLoadingRef.current = loading;
@@ -536,51 +546,6 @@ export default function HomePage() {
     setError(null);
     setRepoUrl("");
     setIsTyping(false);
-    setAskQuestion("");
-    setAskTyping(false);
-    setAskError(null);
-    setAskReply(null);
-  };
-
-  const handleAskQuestion = async (customQ?: string) => {
-    const q = (customQ ?? askQuestion).trim();
-    if (!q || !analysis) return;
-
-    setAskTyping(false);
-    setAsking(true);
-    setAskError(null);
-
-    try {
-      const res = await fetch("/api/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q, analysis }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.error || "Could not answer question.");
-      }
-      const refIds = Array.isArray(data?.referencedNodeIds)
-        ? data.referencedNodeIds.filter((x: unknown): x is string => typeof x === "string")
-        : [];
-      const refFiles = Array.isArray(data?.referencedFiles)
-        ? data.referencedFiles.filter((x: unknown): x is string => typeof x === "string")
-        : [];
-
-      setAskReply({
-        question: q,
-        answer: String(data?.answer || "No answer returned."),
-        referencedNodeIds: refIds,
-        referencedFiles: refFiles,
-      });
-      if (refIds[0]) {
-        setSelectedNodeId(refIds[0]);
-      }
-    } catch (err) {
-      setAskError(err instanceof Error ? err.message : "Assistant error.");
-    } finally {
-      setAsking(false);
-    }
   };
 
   const handleCopyPath = async (filePath: string) => {
@@ -686,8 +651,8 @@ export default function HomePage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#050814] text-slate-100 flex flex-col relative overflow-x-hidden selection:bg-purple-500/30 antialiased">
-      <InteractiveFieldBackdrop />
+    <div className="min-h-screen bg-[#06050f] text-slate-100 flex flex-col relative overflow-x-hidden selection:bg-purple-500/30 antialiased">
+      <LiquidContourBackdrop />
 
       {/* Smooth purple enter/exit transition overlay */}
       {showPurpleFade && (
@@ -697,32 +662,44 @@ export default function HomePage() {
           className="pointer-events-none fixed inset-0 z-50"
           style={{
             background:
-              "radial-gradient(ellipse 85% 65% at 50% 40%, rgba(168,85,247,0.22) 0%, rgba(126,34,206,0.10) 50%, rgba(5,8,18,0) 84%)",
+              "radial-gradient(ellipse 85% 65% at 50% 40%, rgba(168,85,247,0.22) 0%, rgba(126,34,206,0.10) 50%, rgba(6,5,15,0) 84%)",
             animation:
-              "repomapSmoothDissolve 3s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+              "rmSmoothDissolve 3s cubic-bezier(0.22, 1, 0.36, 1) forwards",
           }}
         />
       )}
 
       <style>{`
-        @keyframes repomapSmoothDissolve {
+        @keyframes rmSmoothDissolve {
           0% { opacity: 0; }
           36% { opacity: 0.95; }
           68% { opacity: 0.55; }
           100% { opacity: 0; }
         }
-        @keyframes repomapBloomPulse {
-          0%, 100% { opacity: 0.55; transform: scale(0.98); }
-          50% { opacity: 0.95; transform: scale(1.04); }
+        @keyframes rmSilkWaveA {
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+          50% { transform: translate3d(42px, 24px, 0) scale(1.07); }
         }
-        @keyframes repomapFadeSlide {
+        @keyframes rmSilkWaveB {
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+          50% { transform: translate3d(-36px, -20px, 0) scale(1.06); }
+        }
+        @keyframes rmPathGlideA {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+        @keyframes rmPathGlideB {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(10px); }
+        }
+        @keyframes rmFadeSlide {
           0% { opacity: 0; transform: translateY(8px); }
           100% { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-30 border-b border-purple-400/15 bg-[#060916]/75">
+      <header className="sticky top-0 z-30 border-b border-purple-400/15 bg-[#070614]/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
@@ -773,7 +750,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="shrink-0 rounded-xl border border-white/10 bg-[#090d1c]/70 hover:bg-white/[0.08] px-3 py-2 text-xs text-slate-300 transition-colors cursor-pointer"
+                  className="shrink-0 rounded-xl border border-white/10 bg-[#0b091c]/70 hover:bg-white/[0.08] px-3 py-2 text-xs text-slate-300 transition-colors cursor-pointer"
                 >
                   New
                 </button>
@@ -786,7 +763,7 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-8">
         {error && (
-          <div className="max-w-3xl mx-auto rounded-xl border border-rose-400/35 bg-rose-950/70 px-4 py-3 text-xs sm:text-sm text-rose-200 text-center">
+          <div className="max-w-3xl mx-auto rounded-xl border border-rose-400/35 bg-rose-950/75 px-4 py-3 text-xs sm:text-sm text-rose-200 text-center">
             {error}
           </div>
         )}
@@ -795,7 +772,7 @@ export default function HomePage() {
         {loading && (
           <div
             className="max-w-xl mx-auto py-10"
-            style={{ animation: "repomapFadeSlide 0.45s ease-out forwards" }}
+            style={{ animation: "rmFadeSlide 0.45s ease-out forwards" }}
           >
             <Panel>
               <div className="p-6 sm:p-8 space-y-6">
@@ -865,7 +842,7 @@ export default function HomePage() {
         {!loading && !analysis && (
           <section
             className="space-y-12"
-            style={{ animation: "repomapFadeSlide 0.45s ease-out forwards" }}
+            style={{ animation: "rmFadeSlide 0.45s ease-out forwards" }}
           >
             <div className="text-center max-w-3xl mx-auto pt-4 sm:pt-8 space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full border border-purple-400/35 bg-purple-500/10 px-3.5 py-1.5 text-xs text-purple-200">
@@ -988,7 +965,7 @@ export default function HomePage() {
                   ].map((card, i) => (
                     <div
                       key={card.title}
-                      className="rounded-xl border border-purple-400/20 bg-[#060915]/70 p-4 space-y-2 hover:border-purple-400/55 hover:bg-purple-500/[0.06] transition-all"
+                      className="rounded-xl border border-purple-400/20 bg-[#070614]/65 p-4 space-y-2 hover:border-purple-400/55 hover:bg-purple-500/[0.06] transition-all"
                     >
                       <div className="flex items-center justify-between">
                         <span
@@ -1021,7 +998,7 @@ export default function HomePage() {
         {!loading && analysis && (
           <section
             className="space-y-6"
-            style={{ animation: "repomapFadeSlide 0.45s ease-out forwards" }}
+            style={{ animation: "rmFadeSlide 0.45s ease-out forwards" }}
           >
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
               <Panel className="lg:col-span-5">
@@ -1094,7 +1071,7 @@ export default function HomePage() {
                       className={`rounded-lg border px-2.5 py-1 font-mono text-[11px] transition-colors ${
                         layerFilter === null
                           ? "bg-purple-500/25 text-purple-100 border-purple-400/55"
-                          : "border-white/10 bg-[#090d1c]/65 text-slate-400 hover:text-slate-200"
+                          : "border-white/10 bg-[#0b091c]/65 text-slate-400 hover:text-slate-200"
                       }`}
                     >
                       All
@@ -1110,7 +1087,7 @@ export default function HomePage() {
                           className={`rounded-lg border px-2.5 py-1 font-mono text-[11px] capitalize transition-colors ${
                             active
                               ? st.pillActive
-                              : "border-white/10 bg-[#090d1c]/65 text-slate-400 hover:text-slate-200"
+                              : "border-white/10 bg-[#0b091c]/65 text-slate-400 hover:text-slate-200"
                           }`}
                         >
                           {layer}
@@ -1135,7 +1112,7 @@ export default function HomePage() {
                           }`}
                           style={{
                             background:
-                              "radial-gradient(ellipse at 50% 40%, rgba(168,85,247,0.24) 0%, rgba(126,34,206,0.10) 60%, rgba(5,8,18,0) 85%)",
+                              "radial-gradient(ellipse at 50% 40%, rgba(168,85,247,0.24) 0%, rgba(126,34,206,0.10) 60%, rgba(6,5,15,0) 85%)",
                           }}
                         />
                         <button
@@ -1143,8 +1120,8 @@ export default function HomePage() {
                           onClick={() => setSelectedNodeId(node.id)}
                           className={`relative w-full h-full text-left rounded-2xl border p-4 transition-all ${
                             isSelected
-                              ? "border-purple-400/70 bg-[#14102b]/85 shadow-[0_0_24px_rgba(168,85,247,0.2)]"
-                              : `${st.border} bg-[#090d1c]/70 hover:bg-[#0e1328]/80`
+                              ? "border-purple-400/70 bg-[#150f2e]/80 shadow-[0_0_24px_rgba(168,85,247,0.2)]"
+                              : `${st.border} bg-[#0b091c]/65 hover:bg-[#100c26]/75`
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -1199,7 +1176,7 @@ export default function HomePage() {
                             {getNodeFiles(selectedNode).map((file) => (
                               <div
                                 key={file}
-                                className="flex items-center justify-between gap-2 rounded-lg bg-[#060915]/75 border border-purple-400/15 px-2.5 py-1.5"
+                                className="flex items-center justify-between gap-2 rounded-lg bg-[#070614]/70 border border-purple-400/15 px-2.5 py-1.5"
                               >
                                 <span className="font-mono text-[11px] text-slate-200 truncate">
                                   {file}
@@ -1251,7 +1228,7 @@ export default function HomePage() {
                           {analysis.onboardingSteps.map((item) => (
                             <div
                               key={`${item.step}-${item.filePath}`}
-                              className="rounded-xl border border-purple-400/15 bg-[#060915]/70 p-3"
+                              className="rounded-xl border border-purple-400/15 bg-[#070614]/65 p-3"
                             >
                               <div className="flex items-center justify-between gap-2 mb-1">
                                 <span className="font-mono text-[11px] font-semibold text-purple-200 truncate">
