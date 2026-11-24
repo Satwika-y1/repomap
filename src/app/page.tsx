@@ -191,7 +191,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!showPurpleFade) return;
-    const t = window.setTimeout(() => setShowPurpleFade(false), 2400);
+    const t = window.setTimeout(() => setShowPurpleFade(false), 3600);
     return () => window.clearTimeout(t);
   }, [showPurpleFade, fadeKey]);
 
@@ -397,8 +397,8 @@ export default function HomePage() {
       <style>{`
         @keyframes repomapGentleFade {
           0% { opacity: 0; }
-          30% { opacity: 1; }
-          68% { opacity: 0.55; }
+          40% { opacity: 0.95; }
+          70% { opacity: 0.65; }
           100% { opacity: 0; }
         }
         @keyframes repomapSoftAura {
