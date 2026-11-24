@@ -154,6 +154,21 @@ function Tilt3D({
   return (
     <div style={{ perspective: "1100px" }} className="w-full h-full">
 
+      <div
+        id="repomap-panel-aura"
+        aria-hidden="true"
+        style={{
+          position: "fixed",
+          inset: "8% 6% 4% 6%",
+          zIndex: 1,
+          pointerEvents: "none",
+          borderRadius: "32px",
+          background:
+            "radial-gradient(circle at 22% 28%, rgba(147, 51, 234, 0.11) 0%, rgba(147, 51, 234, 0) 55%), radial-gradient(circle at 78% 62%, rgba(168, 85, 247, 0.10) 0%, rgba(168, 85, 247, 0) 58%)",
+          filter: "blur(56px)",
+        }}
+      />
+
       <div id="repomap-aurora" aria-hidden="true" style={{ position: "fixed", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
         <div
           id="repomap-orb-1"
@@ -819,45 +834,7 @@ export default function HomePage() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (!analysis) return;
-    const el = document.createElement("div");
-    el.setAttribute("aria-hidden", "true");
-    Object.assign(el.style, {
-      position: "fixed",
-      inset: "0",
-      zIndex: "99990",
-      pointerEvents: "none",
-      opacity: "0",
-      willChange: "opacity, transform",
-      background:
-        "radial-gradient(ellipse at 50% 35%, rgba(168, 85, 247, 0.28) 0%, rgba(126, 34, 206, 0.14) 42%, rgba(88, 28, 135, 0.05) 68%, rgba(10, 10, 20, 0) 90%)",
-    });
-    document.body.appendChild(el);
-    const anim = el.animate(
-      [
-        { opacity: 0, transform: "scale(0.985)" },
-        { opacity: 0.55, transform: "scale(1)", offset: 0.28 },
-        { opacity: 0.85, transform: "scale(1.01)", offset: 0.52 },
-        { opacity: 0.28, transform: "scale(1.02)", offset: 0.82 },
-        { opacity: 0, transform: "scale(1.025)" },
-      ],
-      { duration: 2100, easing: "cubic-bezier(0.37, 0, 0.63, 1)", fill: "forwards" }
-    );
-    const timer = setTimeout(() => {
-      anim.cancel();
-      el.remove();
-    }, 2150);
-    return () => {
-      clearTimeout(timer);
-      anim.cancel();
-      el.remove();
-    };
-  }, [analysis]);
-
-  
-  useEffect(() => {
+useEffect(() => {
     const wrap = document.getElementById("repomap-aurora");
     const orb1 = document.getElementById("repomap-orb-1");
     const orb2 = document.getElementById("repomap-orb-2");
@@ -898,6 +875,43 @@ export default function HomePage() {
       window.removeEventListener("mousemove", onMove);
     };
   }, []);
+
+  
+  useEffect(() => {
+    if (!analysis) return;
+    const el = document.createElement("div");
+    el.setAttribute("aria-hidden", "true");
+    Object.assign(el.style, {
+      position: "fixed",
+      inset: "0",
+      zIndex: "99980",
+      pointerEvents: "none",
+      opacity: "0",
+      willChange: "opacity",
+      background:
+        "radial-gradient(ellipse 75% 55% at 50% 38%, rgba(168, 85, 247, 0.16) 0%, rgba(126, 34, 206, 0.08) 48%, rgba(15, 10, 30, 0) 82%)",
+    });
+    document.body.appendChild(el);
+    const anim = el.animate(
+      [
+        { opacity: 0 },
+        { opacity: 0.45, offset: 0.25 },
+        { opacity: 1, offset: 0.45 },
+        { opacity: 0.55, offset: 0.72 },
+        { opacity: 0 },
+      ],
+      { duration: 3200, easing: "ease-in-out", fill: "forwards" }
+    );
+    const timer = setTimeout(() => {
+      anim.cancel();
+      el.remove();
+    }, 3250);
+    return () => {
+      clearTimeout(timer);
+      anim.cancel();
+      el.remove();
+    };
+  }, [analysis]);
 
   const groupedLayers = useMemo(() => {
     if (!analysis?.nodes) return [];
@@ -1173,43 +1187,52 @@ export default function HomePage() {
                     </div>
 
                    <div className="space-y-3">
-  <div className="rounded-xl border border-purple-400/25 bg-gradient-to-br from-purple-500/12 via-fuchsia-500/5 to-transparent p-3">
-    <div className="text-[10px] font-mono uppercase tracking-wider text-purple-300 mb-1">
-      Quick Gameplan
+  <div className="rounded-2xl border border-purple-400/20 bg-gradient-to-r from-purple-500/10 via-violet-500/[0.06] to-transparent px-3.5 py-2.5">
+    <div className="flex items-center justify-between gap-2 mb-1">
+      <span className="text-[10px] font-mono uppercase tracking-widest text-purple-300/90">
+        Quick Walkthrough
+      </span>
+      <span className="text-[10px] font-mono text-purple-200/70">
+        {analysis.totalFiles ? `${analysis.totalFiles} files` : "Overview"}
+      </span>
     </div>
-    <p className="text-xs sm:text-sm leading-relaxed text-slate-200">
+    <p className="text-xs sm:text-[13px] leading-relaxed text-slate-200/95">
       {(() => {
         const raw = String(analysis.summary || "");
         const cleaned = raw.replace(/\s*\(AI note:[\s\S]*$/i, "").trim();
         if (!cleaned || cleaned.startsWith("Structural map of")) {
-          return `${analysis.projectName} is mapped across ${analysis.totalFiles || "its"} files?start with the entry files below to see how the UI, routes, and core logic connect.`;
+          return `${analysis.projectName} is organized into clear functional layers—start with the top entry point and explore modules by responsibility.`;
         }
         const firstSentence = cleaned.replace(/^Step\s*\d+:\s*/i, "").split(/(?<=[.!?])\s+/)[0];
-        return firstSentence || cleaned.slice(0, 160);
+        return firstSentence || cleaned.slice(0, 150);
       })()}
     </p>
   </div>
 
-  <div className="grid grid-cols-1 gap-1.5 text-xs">
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
     {[
-      { tag: "1. Setup", text: "Install dependencies & check env keys in package.json" },
-      { tag: "2. Entry", text: "Open the #1 file under Where to Start Reading" },
-      { tag: "3. Flow", text: "Trace UI components ? routes/API ? core logic" },
-      { tag: "4. Edit", text: "Pick a module card on the right to inspect & tweak" },
-    ].map((item) => (
+      { step: "01", title: "Boot Up", desc: "Check package.json scripts & env vars first" },
+      { step: "02", title: "Start Here", desc: "Open #1 under Where to Start Reading" },
+      { step: "03", title: "Trace Flow", desc: "Follow UI → routes/APIs → shared logic" },
+      { step: "04", title: "Experiment", desc: "Click any module card to inspect & test changes" },
+    ].map((card) => (
       <div
-        key={item.tag}
-        className="flex items-start gap-2 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-2 text-slate-300"
+        key={card.step}
+        className="group rounded-xl border border-purple-400/15 bg-white/[0.025] hover:border-purple-400/35 hover:bg-purple-500/[0.06] transition-colors p-2.5"
       >
-        <span className="shrink-0 rounded bg-purple-500/15 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-purple-200">
-          {item.tag}
-        </span>
-        <span className="leading-snug">{item.text}</span>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-purple-500/20 px-1.5 font-mono text-[10px] font-semibold text-purple-200">
+            {card.step}
+          </span>
+          <span className="text-xs font-medium text-slate-100">{card.title}</span>
+        </div>
+        <p className="text-[11px] leading-snug text-slate-400 group-hover:text-slate-300 transition-colors">
+          {card.desc}
+        </p>
       </div>
     ))}
   </div>
 </div>
-                </div>
               </Tilt3D>
 
               <div className="space-y-3">
