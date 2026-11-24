@@ -793,7 +793,6 @@ export default function HomePage() {
     }
   };
 
-  
   useEffect(() => {
     if (!analysis) return;
     const el = document.createElement("div");
@@ -804,23 +803,25 @@ export default function HomePage() {
       zIndex: "99990",
       pointerEvents: "none",
       opacity: "0",
+      willChange: "opacity, transform",
       background:
-        "radial-gradient(circle at 50% 35%, rgba(192, 132, 252, 0.42) 0%, rgba(126, 34, 206, 0.2) 45%, rgba(10, 10, 20, 0) 78%)",
-      backdropFilter: "blur(3px)",
+        "radial-gradient(ellipse at 50% 35%, rgba(168, 85, 247, 0.28) 0%, rgba(126, 34, 206, 0.14) 42%, rgba(88, 28, 135, 0.05) 68%, rgba(10, 10, 20, 0) 90%)",
     });
     document.body.appendChild(el);
     const anim = el.animate(
       [
-        { opacity: 0, transform: "scale(0.99)" },
-        { opacity: 1, transform: "scale(1)", offset: 0.28 },
-        { opacity: 0, transform: "scale(1.01)" },
+        { opacity: 0, transform: "scale(0.985)" },
+        { opacity: 0.55, transform: "scale(1)", offset: 0.28 },
+        { opacity: 0.85, transform: "scale(1.01)", offset: 0.52 },
+        { opacity: 0.28, transform: "scale(1.02)", offset: 0.82 },
+        { opacity: 0, transform: "scale(1.025)" },
       ],
-      { duration: 1200, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" }
+      { duration: 2100, easing: "cubic-bezier(0.37, 0, 0.63, 1)", fill: "forwards" }
     );
     const timer = setTimeout(() => {
       anim.cancel();
       el.remove();
-    }, 1250);
+    }, 2150);
     return () => {
       clearTimeout(timer);
       anim.cancel();
@@ -1101,32 +1102,42 @@ export default function HomePage() {
                       </button>
                     </div>
 
-                   <div className="space-y-2.5">
-                    {analysis.summary
-                      .split("\n")
-                      .map((line) => line.trim())
-                      .filter(Boolean)
-                      .map((line, idx) => {
-                        const match = line.match(/^(Step\s*\d+:?)\s*(.*)$/i);
-                        return (
-                          <div
-                            key={idx}
-                            className="rounded-lg border border-purple-500/20 bg-purple-500/5 px-3 py-2 text-xs sm:text-sm leading-relaxed text-slate-300"
-                          >
-                            {match ? (
-                              <>
-                                <span className="font-semibold text-purple-300 mr-1.5">
-                                  {match[1]}
-                                </span>
-                                <span>{match[2]}</span>
-                              </>
-                            ) : (
-                              line
-                            )}
-                          </div>
-                        );
-                      })}
-                  </div>
+                   <div className="space-y-3">
+  <div className="rounded-xl border border-purple-400/25 bg-gradient-to-br from-purple-500/12 via-fuchsia-500/5 to-transparent p-3">
+    <div className="text-[10px] font-mono uppercase tracking-wider text-purple-300 mb-1">
+      Quick Gameplan
+    </div>
+    <p className="text-xs sm:text-sm leading-relaxed text-slate-200">
+      {(() => {
+        const raw = String(analysis.summary || "");
+        if (raw.includes("AI note:") || raw.includes("Structural map of")) {
+          return `${analysis.projectName} is mapped across ${analysis.totalFiles || "its"} files?start with the entry files below to see how requests and UI views connect.`;
+        }
+        const firstSentence = raw.replace(/^Step\s*\d+:\s*/i, "").split(/(?<=[.!?])\s+/)[0];
+        return firstSentence || raw.slice(0, 160);
+      })()}
+    </p>
+  </div>
+
+  <div className="grid grid-cols-1 gap-1.5 text-xs">
+    {[
+      { tag: "1. Setup", text: "Install dependencies & check env keys in package.json" },
+      { tag: "2. Entry", text: "Open the #1 file under Where to Start Reading" },
+      { tag: "3. Flow", text: "Trace UI components ? routes/API ? core logic" },
+      { tag: "4. Edit", text: "Pick a module card on the right to inspect & tweak" },
+    ].map((item) => (
+      <div
+        key={item.tag}
+        className="flex items-start gap-2 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-2 text-slate-300"
+      >
+        <span className="shrink-0 rounded bg-purple-500/15 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-purple-200">
+          {item.tag}
+        </span>
+        <span className="leading-snug">{item.text}</span>
+      </div>
+    ))}
+  </div>
+</div>
 
                     {analysis.techStack?.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
