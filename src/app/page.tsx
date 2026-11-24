@@ -876,7 +876,6 @@ useEffect(() => {
     };
   }, []);
 
-  
   useEffect(() => {
     if (!analysis) return;
     const el = document.createElement("div");
