@@ -53,32 +53,32 @@ const LAYER_STYLES: Record<
 > = {
   frontend: {
     badge: "bg-purple-500/15 text-purple-200 border-purple-400/30",
-    border: "border-purple-400/25 hover:border-purple-300/55",
-    pillActive: "bg-purple-500/25 text-purple-100 border-purple-400/55",
+    border: "border-purple-400/25 hover:border-purple-300/60",
+    pillActive: "bg-purple-500/25 text-purple-100 border-purple-400/60",
     dot: "bg-purple-400",
   },
   api: {
     badge: "bg-fuchsia-500/15 text-fuchsia-200 border-fuchsia-400/30",
-    border: "border-fuchsia-400/25 hover:border-fuchsia-300/55",
-    pillActive: "bg-fuchsia-500/25 text-fuchsia-100 border-fuchsia-400/55",
+    border: "border-fuchsia-400/25 hover:border-fuchsia-300/60",
+    pillActive: "bg-fuchsia-500/25 text-fuchsia-100 border-fuchsia-400/60",
     dot: "bg-fuchsia-400",
   },
   logic: {
     badge: "bg-violet-500/15 text-violet-200 border-violet-400/30",
-    border: "border-violet-400/25 hover:border-violet-300/55",
-    pillActive: "bg-violet-500/25 text-violet-100 border-violet-400/55",
+    border: "border-violet-400/25 hover:border-violet-300/60",
+    pillActive: "bg-violet-500/25 text-violet-100 border-violet-400/60",
     dot: "bg-violet-400",
   },
   database: {
     badge: "bg-indigo-500/15 text-indigo-200 border-indigo-400/30",
-    border: "border-indigo-400/25 hover:border-indigo-300/55",
-    pillActive: "bg-indigo-500/25 text-indigo-100 border-indigo-400/55",
+    border: "border-indigo-400/25 hover:border-indigo-300/60",
+    pillActive: "bg-indigo-500/25 text-indigo-100 border-indigo-400/60",
     dot: "bg-indigo-400",
   },
   config: {
     badge: "bg-slate-500/15 text-slate-200 border-slate-400/30",
-    border: "border-slate-400/25 hover:border-slate-300/55",
-    pillActive: "bg-slate-500/25 text-slate-100 border-slate-400/55",
+    border: "border-slate-400/25 hover:border-slate-300/60",
+    pillActive: "bg-slate-500/25 text-slate-100 border-slate-400/60",
     dot: "bg-slate-400",
   },
 };
@@ -98,6 +98,251 @@ function getNodeFiles(node: ArchNode): string[] {
   return [];
 }
 
+/**
+ * Interactive Constellation & Aurora Background
+ * - Drifting luminous architecture nodes connected by soft glowing lines
+ * - Cursor attracts & links nearby nodes with violet/fuchsia filaments
+ * - Clicking anywhere sends a gentle expanding energy ripple
+ */
+function InteractiveConstellationBackground() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animId = 0;
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const resize = () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+
+    const palette = [
+      "rgba(192, 132, 252, ", // purple-400
+      "rgba(232, 121, 249, ", // fuchsia-400
+      "rgba(129, 140, 248, ", // indigo-400
+      "rgba(167, 139, 250, ", // violet-400
+    ];
+
+    const nodeCount = Math.min(85, Math.max(42, Math.floor((width * height) / 22000)));
+    const particles = Array.from({ length: nodeCount }, (_, i) => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.42,
+      vy: (Math.random() - 0.5) * 0.42,
+      r: Math.random() * 1.9 + 1.1,
+      color: palette[i % palette.length],
+      phase: Math.random() * Math.PI * 2,
+    }));
+
+    const mouse = { x: -9999, y: -9999, active: false };
+    const ripples: { x: number; y: number; radius: number; alpha: number }[] = [];
+
+    const onMove = (e: MouseEvent) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.active = true;
+    };
+
+    const onLeave = () => {
+      mouse.active = false;
+    };
+
+    const onClick = (e: MouseEvent) => {
+      ripples.push({ x: e.clientX, y: e.clientY, radius: 10, alpha: 0.55 });
+      for (const p of particles) {
+        const dx = p.x - e.clientX;
+        const dy = p.y - e.clientY;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 1 && dist < 210) {
+          const force = (1 - dist / 210) * 1.8;
+          p.vx += (dx / dist) * force;
+          p.vy += (dy / dist) * force;
+        }
+      }
+    };
+
+    window.addEventListener("resize", resize);
+    window.addEventListener("mousemove", onMove, { passive: true });
+    window.addEventListener("mouseleave", onLeave);
+    window.addEventListener("click", onClick);
+
+    const tick = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      // Soft cursor spotlight directly on canvas
+      if (mouse.active) {
+        const grad = ctx.createRadialGradient(
+          mouse.x,
+          mouse.y,
+          0,
+          mouse.x,
+          mouse.y,
+          240
+        );
+        grad.addColorStop(0, "rgba(168, 85, 247, 0.14)");
+        grad.addColorStop(0.5, "rgba(192, 132, 252, 0.05)");
+        grad.addColorStop(1, "rgba(5, 8, 20, 0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(mouse.x, mouse.y, 240, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Draw click ripples
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const rp = ripples[i];
+        rp.radius += 5.2;
+        rp.alpha *= 0.94;
+        if (rp.alpha < 0.015) {
+          ripples.splice(i, 1);
+          continue;
+        }
+        ctx.strokeStyle = `rgba(192, 132, 252, ${rp.alpha.toFixed(3)})`;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(rp.x, rp.y, rp.radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Update & draw particles
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.phase += 0.02;
+
+        // Gentle damping after click impulses
+        p.vx *= 0.992;
+        p.vy *= 0.992;
+        if (Math.abs(p.vx) < 0.15) p.vx += (Math.random() - 0.5) * 0.03;
+        if (Math.abs(p.vy) < 0.15) p.vy += (Math.random() - 0.5) * 0.03;
+
+        // Subtle magnetic pull toward cursor
+        if (mouse.active) {
+          const dx = mouse.x - p.x;
+          const dy = mouse.y - p.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 190 && dist > 28) {
+            p.vx += (dx / dist) * 0.018;
+            p.vy += (dy / dist) * 0.018;
+          }
+        }
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < -20) p.x = width + 20;
+        if (p.x > width + 20) p.x = -20;
+        if (p.y < -20) p.y = height + 20;
+        if (p.y > height + 20) p.y = -20;
+
+        // Connect nearby nodes
+        for (let j = i + 1; j < particles.length; j++) {
+          const q = particles[j];
+          const dist = Math.hypot(p.x - q.x, p.y - q.y);
+          if (dist < 145) {
+            const alpha = (1 - dist / 145) * 0.24;
+            ctx.strokeStyle = `rgba(168, 85, 247, ${alpha.toFixed(3)})`;
+            ctx.lineWidth = 0.85;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            ctx.stroke();
+          }
+        }
+
+        // Connect node to cursor
+        if (mouse.active) {
+          const mDist = Math.hypot(p.x - mouse.x, p.y - mouse.y);
+          if (mDist < 195) {
+            const alpha = (1 - mDist / 195) * 0.45;
+            ctx.strokeStyle = `rgba(232, 121, 249, ${alpha.toFixed(3)})`;
+            ctx.lineWidth = 1.05;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(mouse.x, mouse.y);
+            ctx.stroke();
+          }
+        }
+
+        const glowAlpha = 0.55 + Math.sin(p.phase) * 0.3;
+        ctx.fillStyle = `${p.color}${glowAlpha.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      animId = window.requestAnimationFrame(tick);
+    };
+
+    animId = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseleave", onLeave);
+      window.removeEventListener("click", onClick);
+    };
+  }, []);
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+    >
+      {/* Rich drifting aurora nebula ribbons */}
+      <div
+        className="absolute -top-44 -left-24 h-[560px] w-[760px] rounded-full blur-[120px]"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(147,51,234,0.28) 0%, rgba(192,38,211,0.12) 48%, rgba(5,8,20,0) 75%)",
+          animation: "repomapAuroraDriftA 16s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="absolute top-1/4 -right-32 h-[540px] w-[680px] rounded-full blur-[130px]"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(99,102,241,0.24) 0%, rgba(139,92,246,0.12) 50%, rgba(5,8,20,0) 76%)",
+          animation: "repomapAuroraDriftB 19s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="absolute -bottom-36 left-1/3 h-[480px] w-[720px] rounded-full blur-[130px]"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(217,70,239,0.20) 0%, rgba(126,34,206,0.10) 52%, rgba(5,8,20,0) 76%)",
+          animation: "repomapAuroraDriftA 22s ease-in-out reverse infinite",
+        }}
+      />
+
+      {/* Interactive neural constellation canvas */}
+      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+
+      {/* Subtle vignette so center content pops */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 70% at 50% 45%, rgba(5,8,20,0) 40%, rgba(5,8,20,0.68) 100%)",
+        }}
+      />
+    </div>
+  );
+}
+
 function GlowPanel({
   children,
   className = "",
@@ -108,23 +353,29 @@ function GlowPanel({
   tilt?: boolean;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const [spot, setSpot] = useState({ x: 50, y: 20, active: false });
 
   const handleMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!tilt) return;
     const el = ref.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const px = (e.clientX - rect.left) / rect.width - 0.5;
-    const py = (e.clientY - rect.top) / rect.height - 0.5;
-    el.style.transform = `perspective(900px) rotateX(${(-py * 4).toFixed(2)}deg) rotateY(${(px * 5).toFixed(2)}deg) translateY(-2px)`;
+    const rx = ((e.clientX - rect.left) / rect.width) * 100;
+    const ry = ((e.clientY - rect.top) / rect.height) * 100;
+    setSpot({ x: rx, y: ry, active: true });
+
+    if (tilt) {
+      const px = (e.clientX - rect.left) / rect.width - 0.5;
+      const py = (e.clientY - rect.top) / rect.height - 0.5;
+      el.style.transform = `perspective(900px) rotateX(${(-py * 4).toFixed(2)}deg) rotateY(${(px * 5).toFixed(2)}deg) translateY(-2px)`;
+    }
   };
 
   const handleLeave = () => {
-    if (!tilt) return;
-    const el = ref.current;
-    if (!el) return;
-    el.style.transform =
-      "perspective(900px) rotateX(0deg) rotateY(0deg) translateY(0px)";
+    setSpot((s) => ({ ...s, active: false }));
+    if (tilt && ref.current) {
+      ref.current.style.transform =
+        "perspective(900px) rotateX(0deg) rotateY(0deg) translateY(0px)";
+    }
   };
 
   return (
@@ -140,11 +391,20 @@ function GlowPanel({
         className="pointer-events-none absolute -inset-1.5 rounded-3xl opacity-70 group-hover:opacity-100 transition-opacity duration-500 blur-xl"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 35%, rgba(168,85,247,0.26) 0%, rgba(126,34,206,0.12) 55%, rgba(6,9,19,0) 82%)",
+            "radial-gradient(ellipse at 50% 35%, rgba(168,85,247,0.28) 0%, rgba(126,34,206,0.12) 55%, rgba(5,8,20,0) 82%)",
           animation: "repomapPanelBreathe 8s ease-in-out infinite",
         }}
       />
-      <div className="relative h-full rounded-2xl border border-purple-400/20 bg-[#0b1022]/85 backdrop-blur-xl shadow-[0_0_32px_rgba(147,51,234,0.12)] overflow-hidden">
+      <div className="relative h-full rounded-2xl border border-purple-400/25 bg-[#0a0e20]/80 backdrop-blur-xl shadow-[0_0_32px_rgba(147,51,234,0.14)] overflow-hidden">
+        {/* Interactive mouse-tracking spotlight inside panel */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 transition-opacity duration-300"
+          style={{
+            opacity: spot.active ? 1 : 0,
+            background: `radial-gradient(320px circle at ${spot.x}% ${spot.y}%, rgba(192,132,252,0.16), rgba(232,121,249,0.06) 40%, transparent 72%)`,
+          }}
+        />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 h-20"
@@ -163,6 +423,7 @@ export default function HomePage() {
   const [repoUrl, setRepoUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState(0);
+  const [elapsedSec, setElapsedSec] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<ArchitectureResult | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -207,17 +468,28 @@ export default function HomePage() {
     return () => window.clearTimeout(t);
   }, [showPurpleFade, fadeKey]);
 
-  // Cycle loading stage labels while fetching
+  // Cycle loading stages & live elapsed timer
   useEffect(() => {
     if (!loading) {
       setLoadingStage(0);
+      setElapsedSec(0);
       return;
     }
-    const t1 = window.setTimeout(() => setLoadingStage(1), 600);
-    const t2 = window.setTimeout(() => setLoadingStage(2), 1400);
+
+    const start = Date.now();
+    const timer = window.setInterval(() => {
+      setElapsedSec((Date.now() - start) / 1000);
+    }, 100);
+
+    const t1 = window.setTimeout(() => setLoadingStage(1), 700);
+    const t2 = window.setTimeout(() => setLoadingStage(2), 1900);
+    const t3 = window.setTimeout(() => setLoadingStage(3), 3600);
+
     return () => {
+      window.clearInterval(timer);
       window.clearTimeout(t1);
       window.clearTimeout(t2);
+      window.clearTimeout(t3);
     };
   }, [loading]);
 
@@ -247,7 +519,7 @@ export default function HomePage() {
 
     const minDelay = new Promise<void>((resolve) => setTimeout(resolve, 1500));
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 9000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 35000);
 
     try {
       const [res] = await Promise.all([
@@ -272,7 +544,7 @@ export default function HomePage() {
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         setError(
-          "Analysis took longer than 9s—try again or pick a smaller public repo."
+          "Analysis timed out after 35s—try again or test a smaller public repository."
         );
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -382,43 +654,33 @@ export default function HomePage() {
   }, [analysis]);
 
   const loadingSteps = [
-    "Scanning repository file tree & entry points",
-    "Grouping modules into architectural layers",
-    "Building beginner walkthrough & reading order",
+    {
+      label: "Fetching GitHub file tree",
+      sub: "Scanning directories, configs & entry files",
+    },
+    {
+      label: "Detecting architectural layers",
+      sub: "Separating frontend, API routes, logic & data",
+    },
+    {
+      label: "Tracing module connections",
+      sub: "Mapping dependencies and request flow",
+    },
+    {
+      label: "Building beginner walkthrough",
+      sub: "Ranking the best starter files to read first",
+    },
   ];
+
+  const loadingProgress = Math.min(
+    92,
+    Math.round((loadingStage + 1) * 22 + elapsedSec * 2)
+  );
 
   return (
     <div className="min-h-screen bg-[#050814] text-slate-100 flex flex-col relative overflow-x-hidden selection:bg-purple-500/30">
-      {/* Subtle architectural dot-grid + ambient purple spotlights */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
-      >
-        <div
-          className="absolute inset-0 opacity-[0.22]"
-          style={{
-            backgroundImage:
-              "radial-gradient(rgba(168,85,247,0.35) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-          }}
-        />
-        <div
-          className="absolute -top-36 left-1/2 -translate-x-1/2 h-[520px] w-[960px] rounded-full blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(168,85,247,0.22) 0%, rgba(109,40,217,0.10) 48%, rgba(5,8,20,0) 76%)",
-            animation: "repomapSoftAura 10s ease-in-out infinite",
-          }}
-        />
-        <div
-          className="absolute bottom-0 right-0 h-[420px] w-[640px] rounded-full blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(139,92,246,0.16) 0%, rgba(126,34,206,0.06) 52%, rgba(5,8,20,0) 76%)",
-            animation: "repomapSoftAura 12s ease-in-out 2.5s infinite",
-          }}
-        />
-      </div>
+      {/* Interactive Neural Constellation + Drifting Aurora Background */}
+      <InteractiveConstellationBackground />
 
       {/* Silky-smooth purple enter/exit transition veil */}
       {showPurpleFade && (
@@ -442,9 +704,13 @@ export default function HomePage() {
           68% { opacity: 0.6; }
           100% { opacity: 0; }
         }
-        @keyframes repomapSoftAura {
-          0%, 100% { opacity: 0.55; transform: scale(0.98); }
-          50% { opacity: 1; transform: scale(1.04); }
+        @keyframes repomapAuroraDriftA {
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+          50% { transform: translate3d(45px, 28px, 0) scale(1.08); }
+        }
+        @keyframes repomapAuroraDriftB {
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+          50% { transform: translate3d(-40px, -24px, 0) scale(1.07); }
         }
         @keyframes repomapPanelBreathe {
           0%, 100% { opacity: 0.6; }
@@ -454,15 +720,23 @@ export default function HomePage() {
           0% { opacity: 0; transform: translateY(10px); }
           100% { opacity: 1; transform: translateY(0); }
         }
+        @keyframes repomapOrbitSlow {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes repomapOrbitReverse {
+          0% { transform: rotate(360deg); }
+          100% { transform: rotate(0deg); }
+        }
       `}</style>
 
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-30 border-b border-purple-400/15 bg-[#060916]/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-purple-400/15 bg-[#060916]/75 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
             onClick={handleReset}
-            className="flex items-center gap-3 text-left group"
+            className="flex items-center gap-3 text-left group cursor-pointer"
           >
             <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-purple-500/35 to-fuchsia-500/20 border border-purple-400/40 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.3)] group-hover:scale-105 transition-transform">
               <svg
@@ -532,59 +806,130 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-8">
         {error && (
-          <div className="max-w-3xl mx-auto rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-xs sm:text-sm text-rose-200 text-center">
+          <div className="max-w-3xl mx-auto rounded-xl border border-rose-400/30 bg-rose-500/10 backdrop-blur-md px-4 py-3 text-xs sm:text-sm text-rose-200 text-center">
             {error}
           </div>
         )}
 
-        {/* Loading View */}
+        {/* Upgraded Constellation Scanner Loading View */}
         {loading && (
           <div
-            className="max-w-xl mx-auto py-12"
+            className="max-w-2xl mx-auto py-8 sm:py-12"
             style={{ animation: "repomapViewFadeIn 0.55s ease-out forwards" }}
           >
             <GlowPanel>
-              <div className="p-8 sm:p-10 text-center space-y-6">
-                <div className="relative mx-auto h-14 w-14 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full border-2 border-purple-500/20" />
-                  <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-purple-400 border-r-fuchsia-400 animate-spin" />
-                  <div className="h-3 w-3 rounded-full bg-purple-300 shadow-[0_0_16px_rgba(192,132,252,0.9)] animate-pulse" />
+              <div className="p-7 sm:p-10 space-y-7">
+                <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] pb-4">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="h-2.5 w-2.5 rounded-full bg-purple-400 animate-pulse shrink-0 shadow-[0_0_12px_rgba(192,132,252,0.9)]" />
+                    <span className="font-mono text-xs text-purple-200 truncate">
+                      {repoUrl || "Analyzing repository"}
+                    </span>
+                  </div>
+                  <span className="shrink-0 rounded-md border border-purple-400/25 bg-purple-500/10 px-2.5 py-1 font-mono text-[11px] text-purple-200">
+                    {elapsedSec.toFixed(1)}s
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <div className="relative h-28 w-28 flex items-center justify-center">
+                    <div
+                      className="absolute inset-0 rounded-full blur-xl opacity-60"
+                      style={{
+                        background:
+                          "radial-gradient(circle, rgba(168,85,247,0.45) 0%, rgba(5,8,20,0) 70%)",
+                      }}
+                    />
+                    <div
+                      className="absolute inset-1 rounded-full border border-dashed border-purple-400/35"
+                      style={{ animation: "repomapOrbitSlow 12s linear infinite" }}
+                    >
+                      <span className="absolute -top-1 left-1/2 -translate-x-1/2 h-2.5 w-2.5 rounded-full bg-purple-300 shadow-[0_0_12px_rgba(192,132,252,0.95)]" />
+                      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-2 w-2 rounded-full bg-fuchsia-400 shadow-[0_0_10px_rgba(232,121,249,0.9)]" />
+                    </div>
+                    <div
+                      className="absolute inset-5 rounded-full border border-fuchsia-400/30"
+                      style={{
+                        animation: "repomapOrbitReverse 7s linear infinite",
+                      }}
+                    >
+                      <span className="absolute top-1/2 -right-1 -translate-y-1/2 h-2 w-2 rounded-full bg-indigo-300 shadow-[0_0_10px_rgba(165,180,252,0.9)]" />
+                    </div>
+                    <div className="relative h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500/40 to-fuchsia-500/25 border border-purple-300/50 flex items-center justify-center shadow-[0_0_24px_rgba(168,85,247,0.45)]">
+                      <svg
+                        className="w-5 h-5 text-purple-100 animate-pulse"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="6" cy="6" r="2.5" />
+                        <circle cx="18" cy="6" r="2.5" />
+                        <circle cx="12" cy="18" r="2.5" />
+                        <path d="M8 7.5 11 15.5" />
+                        <path d="M16 7.5 13 15.5" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h2 className="text-lg font-semibold text-white">
+                      Mapping Repository Architecture
+                    </h2>
+                    <p className="text-xs text-slate-400">
+                      {loadingSteps[loadingStage]?.sub}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <h2 className="text-base sm:text-lg font-semibold text-white">
-                    Mapping Repository Architecture
-                  </h2>
-                  <p className="text-xs text-purple-200/80 font-mono">
-                    {repoUrl || "Analyzing repository..."}
-                  </p>
+                  <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-purple-500 via-fuchsia-400 to-indigo-400 transition-all duration-700 ease-out shadow-[0_0_14px_rgba(192,132,252,0.7)]"
+                      style={{ width: `${loadingProgress}%` }}
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2 text-left max-w-sm mx-auto pt-2">
-                  {loadingSteps.map((label, idx) => {
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {loadingSteps.map((step, idx) => {
                     const active = idx === loadingStage;
                     const done = idx < loadingStage;
                     return (
                       <div
-                        key={label}
-                        className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs transition-all duration-500 ${
+                        key={step.label}
+                        className={`rounded-xl border px-3.5 py-2.5 transition-all duration-500 ${
                           active
-                            ? "bg-purple-500/15 border border-purple-400/30 text-purple-100"
+                            ? "border-purple-400/45 bg-purple-500/15 shadow-[0_0_18px_rgba(168,85,247,0.16)]"
                             : done
-                              ? "text-slate-300"
-                              : "text-slate-500"
+                              ? "border-emerald-400/20 bg-emerald-500/[0.06]"
+                              : "border-white/[0.06] bg-white/[0.02] opacity-55"
                         }`}
                       >
-                        <span
-                          className={`h-2 w-2 rounded-full shrink-0 ${
-                            done
-                              ? "bg-emerald-400"
-                              : active
-                                ? "bg-purple-400 animate-pulse"
-                                : "bg-slate-600"
-                          }`}
-                        />
-                        <span>{label}</span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`h-2 w-2 rounded-full shrink-0 ${
+                              done
+                                ? "bg-emerald-400"
+                                : active
+                                  ? "bg-purple-300 animate-pulse"
+                                  : "bg-slate-600"
+                            }`}
+                          />
+                          <span
+                            className={`text-xs font-medium ${
+                              active
+                                ? "text-white"
+                                : done
+                                  ? "text-emerald-200"
+                                  : "text-slate-400"
+                            }`}
+                          >
+                            {step.label}
+                          </span>
+                        </div>
                       </div>
                     );
                   })}
@@ -600,16 +945,15 @@ export default function HomePage() {
             className="space-y-12"
             style={{ animation: "repomapViewFadeIn 0.55s ease-out forwards" }}
           >
-            {/* Centered Hero */}
             <div className="text-center max-w-3xl mx-auto pt-4 sm:pt-8 space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-full border border-purple-400/30 bg-purple-500/10 px-3.5 py-1.5 text-xs text-purple-200 shadow-[0_0_24px_rgba(168,85,247,0.2)]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-purple-400/35 bg-purple-500/10 backdrop-blur-md px-3.5 py-1.5 text-xs text-purple-200 shadow-[0_0_24px_rgba(168,85,247,0.22)]">
                 <span className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
                 <span className="font-mono tracking-wide">
                   AI-Powered Codebase Intelligence
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[1.12] text-white">
+              <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[1.12] text-white drop-shadow-[0_4px_24px_rgba(168,85,247,0.18)]">
                 Turn any GitHub repo into an{" "}
                 <span className="bg-gradient-to-r from-purple-300 via-fuchsia-300 to-indigo-300 bg-clip-text text-transparent">
                   interactive architecture map
@@ -622,7 +966,6 @@ export default function HomePage() {
                 and a step-by-step beginner reading order in seconds.
               </p>
 
-              {/* Prominent Hero Search Bar */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -632,9 +975,9 @@ export default function HomePage() {
               >
                 <div
                   aria-hidden="true"
-                  className="pointer-events-none absolute -inset-1 rounded-2xl bg-gradient-to-r from-purple-500/35 via-fuchsia-500/25 to-indigo-500/35 blur-lg opacity-75"
+                  className="pointer-events-none absolute -inset-1 rounded-2xl bg-gradient-to-r from-purple-500/40 via-fuchsia-500/30 to-indigo-500/40 blur-lg opacity-80"
                 />
-                <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-2xl border border-purple-400/35 bg-[#0a0f22]/95 p-2 shadow-2xl">
+                <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-2xl border border-purple-400/40 bg-[#090d1f]/90 backdrop-blur-xl p-2 shadow-2xl">
                   <div className="flex items-center gap-2.5 flex-1 px-2.5">
                     <svg
                       className="w-4 h-4 text-purple-300 shrink-0"
@@ -667,7 +1010,6 @@ export default function HomePage() {
                 </div>
               </form>
 
-              {/* 1-Click Example & Recent Repos */}
               <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
                 <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 mr-1">
                   Try:
@@ -680,7 +1022,7 @@ export default function HomePage() {
                       setRepoUrl(item);
                       void handleAnalyze(item);
                     }}
-                    className="rounded-lg border border-purple-400/20 bg-purple-500/[0.08] hover:border-purple-400/55 hover:bg-purple-500/20 px-3 py-1.5 font-mono text-xs text-purple-100 transition-all cursor-pointer"
+                    className="rounded-lg border border-purple-400/25 bg-purple-500/[0.1] backdrop-blur-md hover:border-purple-400/60 hover:bg-purple-500/25 px-3 py-1.5 font-mono text-xs text-purple-100 transition-all cursor-pointer"
                   >
                     {item}
                   </button>
@@ -696,7 +1038,7 @@ export default function HomePage() {
                         setRepoUrl(item);
                         void handleAnalyze(item);
                       }}
-                      className="rounded-lg border border-white/10 bg-white/[0.04] hover:border-purple-400/45 px-3 py-1.5 font-mono text-xs text-slate-200 transition-all cursor-pointer"
+                      className="rounded-lg border border-white/10 bg-white/[0.04] backdrop-blur-md hover:border-purple-400/45 px-3 py-1.5 font-mono text-xs text-slate-200 transition-all cursor-pointer"
                     >
                       {item}
                     </button>
@@ -704,8 +1046,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Interactive Visual Preview Showcase */}
-            <GlowPanel className="max-w-5xl mx-auto">
+            <GlowPanel className="max-w-5xl mx-auto" tilt>
               <div className="p-6 sm:p-8 space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.07] pb-4">
                   <div className="flex items-center gap-2">
@@ -721,7 +1062,6 @@ export default function HomePage() {
                   </span>
                 </div>
 
-                {/* Visual Flow Nodes */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                   {[
                     {
@@ -729,32 +1069,36 @@ export default function HomePage() {
                       title: "UI & Pages",
                       path: "src/app/page.tsx",
                       desc: "Interactive views, state, and user flows",
-                      badge: "bg-purple-500/20 text-purple-200 border-purple-400/30",
+                      badge:
+                        "bg-purple-500/20 text-purple-200 border-purple-400/30",
                     },
                     {
                       layer: "API",
                       title: "Route Handlers",
                       path: "src/app/api/analyze",
                       desc: "Request validation & GitHub tree fetch",
-                      badge: "bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-400/30",
+                      badge:
+                        "bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-400/30",
                     },
                     {
                       layer: "Logic",
                       title: "Core Engine",
                       path: "src/lib/analyzer.ts",
                       desc: "Dependency graph & module clustering",
-                      badge: "bg-violet-500/20 text-violet-200 border-violet-400/30",
+                      badge:
+                        "bg-violet-500/20 text-violet-200 border-violet-400/30",
                     },
                     {
                       layer: "Guide",
                       title: "Reading Order",
                       path: "#1 → #4 Steps",
                       desc: "Exact files a beginner should open first",
-                      badge: "bg-indigo-500/20 text-indigo-200 border-indigo-400/30",
+                      badge:
+                        "bg-indigo-500/20 text-indigo-200 border-indigo-400/30",
                     },
                   ].map((card, i) => (
                     <div key={card.title} className="relative">
-                      <div className="rounded-xl border border-purple-400/20 bg-black/35 p-4 space-y-2 hover:border-purple-400/50 transition-colors">
+                      <div className="rounded-xl border border-purple-400/20 bg-black/40 p-4 space-y-2 hover:border-purple-400/55 hover:bg-purple-500/[0.06] transition-all">
                         <div className="flex items-center justify-between">
                           <span
                             className={`rounded-md border px-2 py-0.5 font-mono text-[10px] ${card.badge}`}
@@ -789,7 +1133,6 @@ export default function HomePage() {
             className="space-y-6"
             style={{ animation: "repomapViewFadeIn 0.55s ease-out forwards" }}
           >
-            {/* Project Overview + 2x2 Beginner Walkthrough */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
               <GlowPanel className="lg:col-span-5" tilt>
                 <div className="p-5 h-full flex flex-col justify-between">
@@ -826,7 +1169,6 @@ export default function HomePage() {
                 </div>
               </GlowPanel>
 
-              {/* 2x2 Beginner Walkthrough Grid */}
               <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {walkthroughSteps.map((step) => (
                   <GlowPanel key={step.num} tilt>
@@ -848,9 +1190,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Modules + Inspector + Reading Order */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-              {/* Left / Center: Layer Filter & Module Cards */}
               <div className="lg:col-span-7 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold text-white">
@@ -913,7 +1253,7 @@ export default function HomePage() {
                           className={`relative w-full h-full text-left rounded-2xl border p-4 backdrop-blur-xl transition-all ${
                             isSelected
                               ? "border-purple-400/70 bg-[#14112c]/95 shadow-[0_0_24px_rgba(168,85,247,0.22)]"
-                              : `${st.border} bg-[#0b1022]/85 hover:bg-[#10142c]/90`
+                              : `${st.border} bg-[#0a0e20]/80 hover:bg-[#10142c]/90`
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -938,7 +1278,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Right: Selected Module Details + Onboarding Steps */}
               <aside className="lg:col-span-5 space-y-5">
                 {selectedNode && (
                   <GlowPanel>
