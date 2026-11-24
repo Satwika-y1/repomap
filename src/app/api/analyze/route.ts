@@ -467,7 +467,7 @@ Key File Contents:
 ${codeContext}
 
 Analyze this codebase and generate:
-1. A clear project summary and detected tech stack.
+1. A "summary" written as a crisp 4-step mini-tutorial for a developer opening this repo for the first time. Put each step on a new line starting with "Step 1:", "Step 2:", "Step 3:", "Step 4:" covering: (1) What the app does & core stack, (2) How a user action or request flows through the code, (3) Where core logic & data live, and (4) Fastest way to run or modify it. Keep each step to 1-2 short sentences. Also include the detected tech stack.
 2. Architectural nodes representing logical modules/layers (strictly one of: frontend, api, logic, database, config). Position them cleanly on a 2D canvas (x between 50 and 900, y between 50 and 600) so nodes do not overlap.
 3. Directed edges showing how data or requests flow between those nodes.
 4. The top 3 entry-point files a new developer should read first, in order, with concrete "reason" guidance on what to look for in each file.`;

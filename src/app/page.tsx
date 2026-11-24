@@ -773,11 +773,15 @@ export default function HomePage() {
     setLayerFilter(null);
 
     try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repoUrl: urlToAnalyze }),
-      });
+      const minDelay = new Promise((resolve) => setTimeout(resolve, 5000));
+      const [res] = await Promise.all([
+        fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ repoUrl: urlToAnalyze }),
+        }),
+        minDelay,
+      ]);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to analyze repository.");
       setAnalysis(data);
@@ -1062,7 +1066,32 @@ export default function HomePage() {
                       </button>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">{analysis.summary}</p>
+                   <div className="space-y-2.5">
+                    {analysis.summary
+                      .split("\n")
+                      .map((line) => line.trim())
+                      .filter(Boolean)
+                      .map((line, idx) => {
+                        const match = line.match(/^(Step\s*\d+:?)\s*(.*)$/i);
+                        return (
+                          <div
+                            key={idx}
+                            className="rounded-lg border border-purple-500/20 bg-purple-500/5 px-3 py-2 text-xs sm:text-sm leading-relaxed text-slate-300"
+                          >
+                            {match ? (
+                              <>
+                                <span className="font-semibold text-purple-300 mr-1.5">
+                                  {match[1]}
+                                </span>
+                                <span>{match[2]}</span>
+                              </>
+                            ) : (
+                              line
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
 
                     {analysis.techStack?.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
