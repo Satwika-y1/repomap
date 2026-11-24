@@ -815,7 +815,7 @@ export default function HomePage() {
     setLayerFilter(null);
 
     try {
-      const minDelay = new Promise((resolve) => setTimeout(resolve, 5000));
+      const minDelay = new Promise((resolve) => setTimeout(resolve, 1500));
       const [res] = await Promise.all([
         fetch("/api/analyze", {
           method: "POST",

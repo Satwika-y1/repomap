@@ -491,8 +491,8 @@ Keep every step clear, concise (1-2 sentences), and easy to follow. Include the 
         let response;
           for (let attempt = 0; attempt < 2; attempt++) {
             try {
-              response = await const response = await ai.models.generateContent({
-          model: modelName,
+              response = await const response = await Promise.race([
+  ai.models.generateContent({ model: modelName,
           contents: prompt,
           config: {
             responseMimeType: "application/json",
@@ -555,8 +555,9 @@ Keep every step clear, concise (1-2 sentences), and easy to follow. Include the 
               },
               required: ["projectName", "summary", "techStack", "nodes", "edges", "onboardingSteps"],
             },
-          },
-        });
+          } }),
+  new Promise((_, reject) => setTimeout(() => reject(new Error("AI timeout")), 9000))
+]);
               break;
             } catch (e) {
               if (attempt === 1 || !String(e).includes("503")) throw e;
