@@ -785,6 +785,10 @@ export default function HomePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to analyze repository.");
       setAnalysis(data);
+      const overlay = document.createElement("div");
+   overlay.className = "purple-transition-overlay";
+   document.body.appendChild(overlay);
+   setTimeout(() => overlay.remove(), 1100);
       saveRecentRepo(urlToAnalyze, data.projectName);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
