@@ -153,6 +153,33 @@ function Tilt3D({
 
   return (
     <div style={{ perspective: "1100px" }} className="w-full h-full">
+
+      <div id="repomap-aurora" aria-hidden="true" style={{ position: "fixed", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+        <div
+          id="repomap-orb-1"
+          style={{
+            position: "absolute",
+            width: "560px",
+            height: "560px",
+            borderRadius: "9999px",
+            background: "radial-gradient(circle, rgba(168, 85, 247, 0.16) 0%, rgba(139, 92, 246, 0.06) 45%, rgba(15, 10, 30, 0) 72%)",
+            filter: "blur(48px)",
+            willChange: "transform",
+          }}
+        />
+        <div
+          id="repomap-orb-2"
+          style={{
+            position: "absolute",
+            width: "640px",
+            height: "640px",
+            borderRadius: "9999px",
+            background: "radial-gradient(circle, rgba(126, 34, 206, 0.13) 0%, rgba(88, 28, 135, 0.05) 50%, rgba(15, 10, 30, 0) 75%)",
+            filter: "blur(60px)",
+            willChange: "transform",
+          }}
+        />
+      </div>
       <div
         ref={cardRef}
         onMouseMove={handleMouseMove}
@@ -828,6 +855,49 @@ export default function HomePage() {
       el.remove();
     };
   }, [analysis]);
+
+  
+  useEffect(() => {
+    const wrap = document.getElementById("repomap-aurora");
+    const orb1 = document.getElementById("repomap-orb-1");
+    const orb2 = document.getElementById("repomap-orb-2");
+    if (!wrap || !orb1 || !orb2) return;
+
+    let animId = 0;
+    let targetX = window.innerWidth * 0.5;
+    let targetY = window.innerHeight * 0.35;
+    let curX = targetX;
+    let curY = targetY;
+    let t = 0;
+
+    const onMove = (e: MouseEvent) => {
+      targetX = e.clientX;
+      targetY = e.clientY;
+    };
+
+    window.addEventListener("mousemove", onMove, { passive: true });
+
+    const tick = () => {
+      t += 0.006;
+      curX += (targetX - curX) * 0.035;
+      curY += (targetY - curY) * 0.035;
+
+      const driftX = Math.cos(t) * 45;
+      const driftY = Math.sin(t * 0.8) * 35;
+
+      orb1.style.transform = `translate3d(${curX - 280 + driftX}px, ${curY - 280 + driftY}px, 0)`;
+      orb2.style.transform = `translate3d(${window.innerWidth * 0.65 - 320 - driftX * 0.7}px, ${window.innerHeight * 0.45 - 320 - driftY * 0.7}px, 0)`;
+
+      animId = requestAnimationFrame(tick);
+    };
+
+    animId = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("mousemove", onMove);
+    };
+  }, []);
 
   const groupedLayers = useMemo(() => {
     if (!analysis?.nodes) return [];
