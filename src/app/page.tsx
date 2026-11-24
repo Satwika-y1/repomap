@@ -154,6 +154,24 @@ function Tilt3D({
   return (
     <div style={{ perspective: "1100px" }} className="w-full h-full">
 
+      {fadeTick > 0 && (
+        <div
+          key={fadeTick}
+          id="repomap-soft-fade"
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99980,
+            pointerEvents: "none",
+            background:
+              "radial-gradient(ellipse 75% 55% at 50% 38%, rgba(168, 85, 247, 0.14) 0%, rgba(126, 34, 206, 0.07) 48%, rgba(15, 10, 30, 0) 82%)",
+            animation: "repomapSoftFade 3s ease-in-out forwards",
+          }}
+        />
+      )}
+      <style>{`@keyframes repomapSoftFade { 0% { opacity: 0; } 30% { opacity: 0.9; } 65% { opacity: 0.45; } 100% { opacity: 0; } }`}</style>
+
       <div
         id="repomap-panel-aura"
         aria-hidden="true"
@@ -713,6 +731,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [fadeTick, setFadeTick] = useState(0);
   const [selectedNode, setSelectedNode] = useState<ArchNode | null>(null);
   const [cardTab, setCardTab] = useState<"overview" | "links" | "files">("overview");
   const [layerFilter, setLayerFilter] = useState<string | null>(null);
@@ -827,6 +846,7 @@ export default function HomePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to analyze repository.");
       setAnalysis(data);
+      setFadeTick((n) => n + 1);
       saveRecentRepo(urlToAnalyze, data.projectName);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -875,44 +895,7 @@ useEffect(() => {
       window.removeEventListener("mousemove", onMove);
     };
   }, []);
-
-  useEffect(() => {
-    if (!analysis) return;
-    const el = document.createElement("div");
-    el.setAttribute("aria-hidden", "true");
-    Object.assign(el.style, {
-      position: "fixed",
-      inset: "0",
-      zIndex: "99980",
-      pointerEvents: "none",
-      opacity: "0",
-      willChange: "opacity",
-      background:
-        "radial-gradient(ellipse 75% 55% at 50% 38%, rgba(168, 85, 247, 0.16) 0%, rgba(126, 34, 206, 0.08) 48%, rgba(15, 10, 30, 0) 82%)",
-    });
-    document.body.appendChild(el);
-    const anim = el.animate(
-      [
-        { opacity: 0 },
-        { opacity: 0.45, offset: 0.25 },
-        { opacity: 1, offset: 0.45 },
-        { opacity: 0.55, offset: 0.72 },
-        { opacity: 0 },
-      ],
-      { duration: 3200, easing: "ease-in-out", fill: "forwards" }
-    );
-    const timer = setTimeout(() => {
-      anim.cancel();
-      el.remove();
-    }, 3250);
-    return () => {
-      clearTimeout(timer);
-      anim.cancel();
-      el.remove();
-    };
-  }, [analysis]);
-
-  const groupedLayers = useMemo(() => {
+const groupedLayers = useMemo(() => {
     if (!analysis?.nodes) return [];
     const orderMap = new Map<string, number>();
     LAYER_ORDER.forEach((k, idx) => orderMap.set(k, idx));
@@ -1195,17 +1178,47 @@ useEffect(() => {
         {analysis.totalFiles ? `${analysis.totalFiles} files` : "Overview"}
       </span>
     </div>
-    <p className="text-xs sm:text-[13px] leading-relaxed text-slate-200/95">
-      {(() => {
-        const raw = String(analysis.summary || "");
-        const cleaned = raw.replace(/\s*\(AI note:[\s\S]*$/i, "").trim();
-        if (!cleaned || cleaned.startsWith("Structural map of")) {
-          return `${analysis.projectName} is organized into clear functional layers—start with the top entry point and explore modules by responsibility.`;
-        }
-        const firstSentence = cleaned.replace(/^Step\s*\d+:\s*/i, "").split(/(?<=[.!?])\s+/)[0];
-        return firstSentence || cleaned.slice(0, 150);
-      })()}
-    </p>
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-purple-400/25 bg-gradient-to-br from-purple-500/12 via-violet-500/[0.06] to-transparent p-3">
+                      <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-purple-300 mb-1">
+                        <span>What This Repo Does</span>
+                        <span className="text-purple-200/75">{analysis.totalFiles ? `${analysis.totalFiles} files` : "Overview"}</span>
+                      </div>
+                      <p className="text-xs sm:text-[13px] leading-relaxed text-slate-200">
+                        {(() => {
+                          const raw = String(analysis.summary || "");
+                          const cleaned = raw.replace(/\s*\(AI note:[\s\S]*$/i, "").trim();
+                          if (!cleaned || cleaned.startsWith("Structural map of")) {
+                            return `${analysis.projectName} is mapped across ${analysis.totalFiles || "its"} files—start with the entry file below to see how the UI, routes, and logic fit together.`;
+                          }
+                          const firstSentence = cleaned.replace(/^Step\s*\d+:\s*/i, "").split(/(?<=[.!?])\s+/)[0];
+                          return firstSentence || cleaned.slice(0, 150);
+                        })()}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {[
+                        { num: "1", title: "Install & Env", hint: "Check package.json & .env keys" },
+                        { num: "2", title: "Entry Point", hint: "Open #1 in Where to Start Reading" },
+                        { num: "3", title: "Request Flow", hint: "Trace UI → routes/APIs → logic" },
+                        { num: "4", title: "Inspect Modules", hint: "Click cards on the right to explore" },
+                      ].map((step) => (
+                        <div
+                          key={step.num}
+                          className="rounded-xl border border-purple-400/15 bg-white/[0.025] hover:border-purple-400/35 hover:bg-purple-500/[0.06] transition-colors p-2.5"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-purple-500/20 font-mono text-[11px] font-semibold text-purple-200">
+                              {step.num}
+                            </span>
+                            <span className="text-xs font-medium text-slate-100">{step.title}</span>
+                          </div>
+                          <p className="text-[11px] leading-snug text-slate-400">{step.hint}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
   </div>
 
   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
