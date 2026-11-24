@@ -786,9 +786,20 @@ export default function HomePage() {
       if (!res.ok) throw new Error(data.error || "Failed to analyze repository.");
       setAnalysis(data);
       const overlay = document.createElement("div");
-   overlay.className = "purple-transition-overlay";
-   document.body.appendChild(overlay);
-   setTimeout(() => overlay.remove(), 1100);
+      Object.assign(overlay.style, {
+        position: "fixed",
+        inset: "0",
+        zIndex: "99999",
+        pointerEvents: "none",
+        background: "radial-gradient(circle at center, rgba(168,85,247,0.55) 0%, rgba(126,34,206,0.28) 45%, rgba(15,10,30,0) 85%)",
+        backdropFilter: "blur(6px)",
+      });
+      document.body.appendChild(overlay);
+      overlay.animate(
+        [{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 0 }],
+        { duration: 1200, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" }
+      );
+      setTimeout(() => overlay.remove(), 1250);
       saveRecentRepo(urlToAnalyze, data.projectName);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
