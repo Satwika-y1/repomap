@@ -1180,11 +1180,12 @@ export default function HomePage() {
     <p className="text-xs sm:text-sm leading-relaxed text-slate-200">
       {(() => {
         const raw = String(analysis.summary || "");
-        if (raw.includes("AI note:") || raw.includes("Structural map of")) {
-          return `${analysis.projectName} is mapped across ${analysis.totalFiles || "its"} files?start with the entry files below to see how requests and UI views connect.`;
+        const cleaned = raw.replace(/\s*\(AI note:[\s\S]*$/i, "").trim();
+        if (!cleaned || cleaned.startsWith("Structural map of")) {
+          return `${analysis.projectName} is mapped across ${analysis.totalFiles || "its"} files?start with the entry files below to see how the UI, routes, and core logic connect.`;
         }
-        const firstSentence = raw.replace(/^Step\s*\d+:\s*/i, "").split(/(?<=[.!?])\s+/)[0];
-        return firstSentence || raw.slice(0, 160);
+        const firstSentence = cleaned.replace(/^Step\s*\d+:\s*/i, "").split(/(?<=[.!?])\s+/)[0];
+        return firstSentence || cleaned.slice(0, 160);
       })()}
     </p>
   </div>
@@ -1208,55 +1209,6 @@ export default function HomePage() {
     ))}
   </div>
 </div>
-
-                    {analysis.techStack?.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {analysis.techStack.map((tech) => (
-                          <span
-                            key={tech}
-                            className="text-[11px] px-2.5 py-0.5 rounded-md bg-purple-500/12 text-purple-200 border border-purple-400/25"
-                          >
-                            {tech}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="pt-3 border-t border-white/[0.09] space-y-2">
-                      <div className="text-[11px] font-mono uppercase tracking-wider text-slate-400">
-                        Filter by Layer
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setLayerFilter(null)}
-                          className={!layerFilter
-                            ? "text-xs px-3 py-1 rounded-lg border transition cursor-pointer bg-purple-500/25 border-purple-300 text-white font-semibold"
-                            : "text-xs px-3 py-1 rounded-lg border transition cursor-pointer bg-black/35 border-white/10 text-slate-300 hover:text-white"}
-                        >
-                          All ({analysis.nodes?.length || 0})
-                        </button>
-                        {presentLayers.map(([layerKey, count]) => {
-                          const cfg = LAYER_CONFIG[layerKey] || LAYER_CONFIG.config;
-                          const active = layerFilter === layerKey;
-                          return (
-                            <button
-                              key={layerKey}
-                              type="button"
-                              onClick={() => setLayerFilter(active ? null : layerKey)}
-                              className={active
-                                ? "inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg border transition cursor-pointer bg-purple-500/25 border-purple-300 text-white font-semibold"
-                                : "inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg border transition cursor-pointer bg-black/35 border-white/10 text-slate-300 hover:text-white"}
-                            >
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cfg.dotHex }} />
-                              <span>{cfg.shortLabel}</span>
-                              <span className="text-[11px] font-mono text-slate-400">{count}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </Tilt3D>
 
